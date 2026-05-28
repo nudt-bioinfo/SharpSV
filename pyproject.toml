@@ -46,23 +46,13 @@ sharpsv-stage1-train = "sharpsv.stage1.train:main"
 sharpsv-stage2-refine-predictions = "sharpsv.stage2.refine:main"
 sharpsv-stage3-sort-predictions = "sharpsv.stage3.sort_predictions:main"
 sharpsv-stage3-validate-assembly = "sharpsv.stage3.assembly_validator:main"
-sharpsv-stage4-export-vcf = "sharpsv_stage4_export_vcf:main"
+sharpsv-stage4-export-vcf = "sharpsv.stage4.export_vcf_cli:main"
 sharpsv-stage4-realign-vcf = "sharpsv.stage4.realign_vcf:main"
 
 [tool.setuptools]
 include-package-data = true
 py-modules = [
   "SharpSV",
-  "sharpsv_backend",
-  "sharpsv_native",
-  "sharpsv_stage1_extract_features",
-  "sharpsv_stage1_score_candidates",
-  "sharpsv_stage1_train",
-  "sharpsv_stage2_refine_predictions",
-  "sharpsv_stage3_sort_predictions",
-  "sharpsv_stage3_validate_assembly",
-  "sharpsv_stage4_export_vcf",
-  "sharpsv_stage4_realign_vcf",
 ]
 zip-safe = false
 

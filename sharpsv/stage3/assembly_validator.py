@@ -10,7 +10,7 @@ try:
     import mamnet
 except ImportError:
     try:
-        import sharpsv_native as mamnet
+        from .. import native as mamnet
     except ImportError:
         print("[Error] Cannot import 'mamnet' or fallback 'sharpsv_native'.")
         sys.exit(1)

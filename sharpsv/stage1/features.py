@@ -9,7 +9,7 @@ import numpy as np
 import pysam
 from numba.typed import List
 
-import sharpsv_native
+from .. import native as sharpsv_native
 from ..utils.console import emit, emit_banner, format_duration
 
 def baseinfo_guess(bamfile, contig, start, end, feature_count, maxcountread):

@@ -18,6 +18,10 @@
 
 - `console.py`: unified terminal rendering, progress display, ANSI color, and compact layout logic.
 
+### `sharpsv/backend.py` and `sharpsv/native.py`
+
+- package-internal loaders for the bundled native backend, replacing the old root-level compatibility modules.
+
 ### `sharpsv/stage1/`
 
 - `features.py`: NPZ feature synthesis from BAM.
@@ -49,24 +53,22 @@
 
 ### `sharpsv/_bundle/native/`
 
-- `sharpsv.cpython-38-x86_64-linux-gnu.so`: packaged native backend asset loaded by `sharpsv_backend.py`.
+- `sharpsv.cpython-38-x86_64-linux-gnu.so`: packaged native backend asset loaded by `sharpsv/backend.py`.
 
 ## `fermikit/`
 
 - `local_assemble.py`: builds `workdir/stage3_assembled_regions/` from `stage3_refined_sv_results.csv` and writes `stage3_assembly_results.json`, `stage3_assembled_regions_manifest.tsv`, and `stage3_assembled_regions_archive.tar.gz`.
 - `merge_bams.py`: merges per-region assembly BAMs into `workdir/stage3_assembled_regions.sorted.bam` using `workdir/stage3_merge_temp/`.
 
-## Stage Entry Scripts
+## Stage Commands
 
-The repository root now keeps explicit stage-based entry scripts:
+Stage-specific commands are exposed through installed console entry points or direct module execution:
 
-- `sharpsv_stage1_extract_features.py`
-- `sharpsv_stage1_score_candidates.py`
-- `sharpsv_stage1_train.py`
-- `sharpsv_stage2_refine_predictions.py`
-- `sharpsv_stage3_sort_predictions.py`
-- `sharpsv_stage3_validate_assembly.py`
-- `sharpsv_stage4_export_vcf.py`
-- `sharpsv_stage4_realign_vcf.py`
-
-These thin wrappers delegate to the organized package modules above.
+- `sharpsv-stage1-extract-features` or `python -m sharpsv.stage1.features`
+- `sharpsv-stage1-score-candidates` or `python -m sharpsv.stage1.predict`
+- `sharpsv-stage1-train` or `python -m sharpsv.stage1.train`
+- `sharpsv-stage2-refine-predictions` or `python -m sharpsv.stage2.refine`
+- `sharpsv-stage3-sort-predictions` or `python -m sharpsv.stage3.sort_predictions`
+- `sharpsv-stage3-validate-assembly` or `python -m sharpsv.stage3.assembly_validator`
+- `sharpsv-stage4-export-vcf` or `python -m sharpsv.stage4.export_vcf_cli`
+- `sharpsv-stage4-realign-vcf` or `python -m sharpsv.stage4.realign_vcf`

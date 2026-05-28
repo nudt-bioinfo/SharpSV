@@ -1410,10 +1410,10 @@ def c_c_nosa(mdtaglist, cigarlist, corposlist, tstart, end, svtype, qualityarray
     return info, cluster_result, cluster_readcount
 
 try:
-  import sharpsv_backend
+  from sharpsv import backend as sharpsv_backend
 except:
   try:
-    import sharpsv_native
+    from sharpsv import native as sharpsv_native
   except:
     cc.compile()
 def labeldata(vcfpath, contig, start, end):

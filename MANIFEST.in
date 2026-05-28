@@ -1,16 +1,6 @@
 include README.md
 include LICENSE
 include SharpSV.py
-include sharpsv_backend.py
-include sharpsv_native.py
-include sharpsv_stage1_extract_features.py
-include sharpsv_stage1_score_candidates.py
-include sharpsv_stage1_train.py
-include sharpsv_stage2_refine_predictions.py
-include sharpsv_stage3_sort_predictions.py
-include sharpsv_stage3_validate_assembly.py
-include sharpsv_stage4_export_vcf.py
-include sharpsv_stage4_realign_vcf.py
 recursive-include sharpsv/_bundle/models *.json
 recursive-include sharpsv/_bundle/native *.so
 recursive-include fermikit/fermi.kit *

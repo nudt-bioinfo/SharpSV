@@ -6,7 +6,7 @@ from pathlib import Path
 _MODULE_DIR = Path(__file__).resolve().parent
 _PRIVATE_BUNDLE_MODULE_PREFIX = "_sharpsv_bundle"
 _LEGACY_INIT_NAME = "m" + "amnet"
-_BUNDLE_NATIVE_DIR = _MODULE_DIR / "sharpsv" / "_bundle" / "native"
+_BUNDLE_NATIVE_DIR = _MODULE_DIR / "_bundle" / "native"
 
 
 def _load_extension(module_name, binary_path):
@@ -29,7 +29,7 @@ def _load_extension(module_name, binary_path):
 
 
 def _load_backend():
-    search_roots = [_MODULE_DIR, _BUNDLE_NATIVE_DIR]
+    search_roots = [_MODULE_DIR, _BUNDLE_NATIVE_DIR, _MODULE_DIR.parent]
     module_names = [
         _LEGACY_INIT_NAME,
         f"{_PRIVATE_BUNDLE_MODULE_PREFIX}.{_LEGACY_INIT_NAME}",
@@ -53,7 +53,7 @@ def _load_backend():
                     continue
 
     raise ImportError(
-        "SharpSV native backend could not be loaded from the top-level install root "
+        "SharpSV native backend could not be loaded from the package directory "
         "or the packaged native bundle."
     )
 

@@ -1,6 +1,6 @@
 import argparse
 
-from sharpsv.stage4.pipeline import export_stage3_csv_to_vcf
+from .pipeline import export_stage3_csv_to_vcf
 
 
 def build_parser():

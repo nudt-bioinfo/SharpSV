@@ -1,12 +1,14 @@
 # SharpSV
 
-SharpSV is a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data. It is designed to recover structurally abnormal regions from whole-genome short-read alignments, transform candidate loci into Vertical-Site Profile (VSP) images, decode them with a spatial-sequential neural architecture, and refine final breakpoints through local assembly and adaptive validation.
+SharpSV is a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data that scans whole-genome alignments to recover structurally abnormal regions, converts candidate loci into Vertical-Site Profile (VSP) image tensors, decodes them with a spatial-sequential neural architecture, and refines final breakpoints through local assembly and adaptive validation; relative to conventional heuristic SV callers, SharpSV is designed to preserve fragmented breakpoint evidence instead of discarding it early, with a particular emphasis on improving insertion sensitivity while maintaining competitive performance across common SV classes.
 
-Compared with conventional heuristic SV callers, SharpSV is built to preserve fragmented breakpoint evidence instead of discarding it early. In practice, the method is especially focused on improving insertion sensitivity while maintaining competitive performance across common SV classes.
+<p align="center">
+  <img src="docs/assets/fig1-overview.svg" alt="SharpSV manuscript-aligned workflow overview" width="1120">
+</p>
 
-![SharpSV Fig.1 overview](docs/assets/fig1-overview.gif)
-
-*Fig. 1. Main SharpSV workflow extracted from the current manuscript draft. A manuscript-aligned walkthrough is available in [docs/PIPELINE_OVERVIEW.md](docs/PIPELINE_OVERVIEW.md).*
+<p align="center">
+  <em>Fig. 1. Manuscript-aligned SharpSV workflow overview. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
+</p>
 
 ## Concept
 

@@ -1,0 +1,30 @@
+# Runtime outputs
+workdir/
+*.workdir/
+final_adaptive_validated.csv
+SharpSV.vcf
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+*.whl
+
+# Local tool state
+.codex/
+.agents/
+
+# Nested vendored git metadata
+fermikit/**/.git/
+
+# Keep only the fermikit runtime used by SharpSV
+fermikit/*
+!fermikit/__init__.py
+!fermikit/local_assemble.py
+!fermikit/merge_bams.py
+!fermikit/fermi.kit/
+!fermikit/fermi.kit/**

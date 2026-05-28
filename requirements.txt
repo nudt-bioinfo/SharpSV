@@ -1,0 +1,22 @@
+# Core pipeline
+numpy==1.24.4
+pandas==2.0.3
+pysam==0.22.1
+numba==0.58.1
+scipy==1.10.1
+matplotlib==3.7.3
+biopython==1.83
+
+# PyTorch inference/training stack
+# The SharpSV runtime expects the official CUDA 11.8 PyTorch wheels on NVIDIA hosts.
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.4.1+cu118
+torchvision==0.19.1+cu118
+torchaudio==2.4.1+cu118
+pytorch-lightning==2.4.0
+scikit-learn==1.3.2
+tqdm==4.67.3
+
+# Hyper-parameter search utilities
+ray[tune]==2.23.0
+hyperopt==0.2.7

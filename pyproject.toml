@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sharpsv"
+version = "0.1.0"
+description = "Structural variant discovery pipeline with bundled stage models"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.8,<3.9"
+license = { file = "LICENSE" }
+authors = [
+  { name = "SharpSV Authors" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "numpy==1.24.4",
+  "pandas==2.0.3",
+  "pysam==0.22.1",
+  "numba==0.58.1",
+  "scipy==1.10.1",
+  "matplotlib==3.7.3",
+  "biopython==1.83",
+  "scikit-learn==1.3.2",
+  "tqdm==4.67.3",
+  "hyperopt==0.2.7",
+  "ray[tune]==2.23.0",
+  "torch==2.4.1",
+  "torchvision==0.19.1",
+  "torchaudio==2.4.1",
+  "pytorch-lightning==2.4.0",
+]
+
+[project.scripts]
+SharpSV = "sharpsv.cli.pipeline:main"
+sharpsv = "sharpsv.cli.pipeline:main"
+sharpsv-stage1-extract-features = "sharpsv.stage1.features:main"
+sharpsv-stage1-score-candidates = "sharpsv.stage1.predict:main"
+sharpsv-stage1-train = "sharpsv.stage1.train:main"
+sharpsv-stage2-refine-predictions = "sharpsv.stage2.refine:main"
+sharpsv-stage3-sort-predictions = "sharpsv.stage3.sort_predictions:main"
+sharpsv-stage3-validate-assembly = "sharpsv.stage3.assembly_validator:main"
+sharpsv-stage4-export-vcf = "sharpsv_stage4_export_vcf:main"
+sharpsv-stage4-realign-vcf = "sharpsv.stage4.realign_vcf:main"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = [
+  "SharpSV",
+  "sharpsv_backend",
+  "sharpsv_native",
+  "sharpsv_stage1_extract_features",
+  "sharpsv_stage1_score_candidates",
+  "sharpsv_stage1_train",
+  "sharpsv_stage2_refine_predictions",
+  "sharpsv_stage3_sort_predictions",
+  "sharpsv_stage3_validate_assembly",
+  "sharpsv_stage4_export_vcf",
+  "sharpsv_stage4_realign_vcf",
+]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["sharpsv*", "fermikit*"]
+
+[tool.setuptools.package-data]
+sharpsv = ["_bundle/models/*.bin", "_bundle/models/*.part-*", "_bundle/native/*.so"]
+fermikit = ["fermi.kit/*"]

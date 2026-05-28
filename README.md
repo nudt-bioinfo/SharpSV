@@ -10,7 +10,6 @@ SharpSV is a site-centered hierarchical analysis and refinement pipeline for str
   <em>Fig. 1. SharpSV workflow overview. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
 </p>
 
-<p align="center"><strong>License:</strong> MIT</p>
 
 ## Concept
 

@@ -3,13 +3,11 @@
 SharpSV is a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data that scans whole-genome alignments to recover structurally abnormal regions, converts candidate loci into Vertical-Site Profile (VSP) image tensors, decodes them with a spatial-sequential neural architecture, and refines final breakpoints through local assembly and adaptive validation; relative to conventional heuristic SV callers, SharpSV is designed to preserve fragmented breakpoint evidence instead of discarding it early, with a particular emphasis on improving insertion sensitivity while maintaining competitive performance across common SV classes.
 
 <p align="center">
-  <a href="docs/assets/fig1-workflow.pdf">
-    <img src="docs/assets/fig1-workflow-preview.png" alt="SharpSV workflow overview" width="1120">
-  </a>
+  <img src="docs/assets/fig1-workflow.svg" alt="SharpSV workflow overview" width="1120">
 </p>
 
 <p align="center">
-  <em>Fig. 1. SharpSV workflow overview. Click the figure to open the original PDF. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
+  <em>Fig. 1. SharpSV workflow overview. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
 </p>
 
 ## Concept

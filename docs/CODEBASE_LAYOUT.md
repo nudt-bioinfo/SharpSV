@@ -6,6 +6,7 @@
 - `sharpsv/`: organized implementation package.
 - `fermikit/`: local-assembly toolchain plus Python wrappers used in stage-3.
 - `legacy/`: archived compatibility modules and older utilities.
+- `docs/`: installation notes, codebase layout, release notes, manuscript-aligned overview, and figure assets for the GitHub presentation layer.
 - `workdir/`: intermediate runtime artifacts such as NPZ blocks, stage-1 candidates, stage-2 `stage2_predictions.csv`, and stage-3 products such as `stage3_refined_sv_results.csv`, `stage3_assembled_regions/`, `stage3_merge_temp/`, and `stage3_assembled_regions.sorted.bam`.
 
 ## `sharpsv/`

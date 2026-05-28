@@ -1,6 +1,23 @@
 # SharpSV
 
-SharpSV is a structural variant discovery pipeline for sorted, indexed BAM files. It packages feature extraction, neural screening, image-based refinement, local assembly, adaptive validation, and final VCF generation into a single user-facing workflow.
+SharpSV is a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data. It is designed to recover structurally abnormal regions from whole-genome short-read alignments, transform candidate loci into Vertical-Site Profile (VSP) images, decode them with a spatial-sequential neural architecture, and refine final breakpoints through local assembly and adaptive validation.
+
+Compared with conventional heuristic SV callers, SharpSV is built to preserve fragmented breakpoint evidence instead of discarding it early. In practice, the method is especially focused on improving insertion sensitivity while maintaining competitive performance across common SV classes.
+
+![SharpSV Fig.1 overview](docs/assets/fig1-overview.gif)
+
+*Fig. 1. Main SharpSV workflow extracted from the current manuscript draft. A manuscript-aligned walkthrough is available in [docs/PIPELINE_OVERVIEW.md](docs/PIPELINE_OVERVIEW.md).*
+
+## Concept
+
+SharpSV follows the same four-stage logic described in the manuscript:
+
+- coarse screening: 1,000-bp windows, nine site-wise features, and attentive MIL pruning of normal genomic background
+- sequence-to-image encoding: twenty consecutive 50-bp subregions converted into VSP image tensors
+- spatial-sequential recognition: CNN and transformer modeling across ordered VSP segments
+- breakpoint refinement: local assembly, contig realignment, and adaptive validation to base-pair resolution
+
+The production codebase then appends a practical finalization stage that exports validated calls to VCF and performs DEL-focused realignment refinement for the final deliverable file.
 
 ## Highlights
 
@@ -57,6 +74,13 @@ python SharpSV.py ... \
 ```
 
 By default the model cache lives under `XDG_CACHE_HOME` or `/tmp/sharpsv-cache/bundled-models`. Maintainers can override the release download root with `SHARPSV_BUNDLE_BASE_URL`.
+
+## Manuscript To Runtime Mapping
+
+- manuscript coarse screening corresponds to repository `stage-1`
+- manuscript sequence-to-image encoding plus SSR-Net recognition corresponds to repository `stage-2`
+- manuscript local assembly and breakpoint refinement corresponds to repository `stage-3`
+- repository `stage-4` is a production-facing output layer for VCF export and DEL realignment
 
 ## Pipeline Outputs
 

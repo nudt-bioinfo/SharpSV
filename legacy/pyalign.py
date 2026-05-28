@@ -61,12 +61,7 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
 
         if(posinref + item[1] > start): # Meet start. Slice required.
 
-          #print('front early stopping')
-          #print('posinref is', posinref)
-          #cigararray = np.append(cigararray, np.ones(posinref + item[1] - start) * item[0])
           cigartuples[itemcount] = [item[0], int(posinref + item[1] - start)] 
-          #print(item[1])
-          #print('push in cigararray ', cigartuples[itemcount])
 
           if(item[0] in [0, 7, 8]): # For reference match
             
@@ -135,10 +130,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
     
     return None, np.ones(int(end - start)) * 6, np.column_stack((np.arange(start, end).reshape(int(end - start), 1), np.zeros((int(end - start), 1)))), np.ones(int(end - start)).reshape(int(end - start), 1) * 0
   
-  #print('posinref is', posinref)
-  #print('read position is ', readarray[slicestart: slicestart +10])
-
-  
   if(posinref < end):
     
     usefront = False
@@ -151,7 +142,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
     for item in cigartuples[itemcount:]:
       
       locincigartuples = locincigartuples + 1
-      #print('current cigar is ', item, 'posinref is ', posinref, 'posinread is ', posinread, 'start is ', start, 'end is ', end)
       #For reference match: posinref is match part first base
       if(item[0] in [0, 7, 8]):
         
@@ -159,7 +149,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
         
         if(end <= item[1] + posinref): 
 
-          #print('posinref, end ', posinref, end)
           cigararray = np.append(cigararray, np.ones(end - posinref) * item[0])
           readarray = readarray[: posinread + end - posinref]
           qualityarray = qualityarray[: posinread + end - posinref]
@@ -196,7 +185,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
         
         if(end <= item[1] + posinref): 
             
-          #print('del posinref, end ', posinref, end)
           cigararray = np.append(cigararray, np.ones(end - posinref) * item[0])
           readarray = np.row_stack((readarray[: posinread], np.column_stack((np.arange(posinref, end).reshape(end - posinref, 1), np.zeros(end - posinref).reshape(end - posinref, 1)))))
           qualityarray = np.row_stack((qualityarray[: posinread], np.zeros(end - posinref).reshape(end - posinref, 1)))
@@ -208,7 +196,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
 
           cigararray = np.append(cigararray, np.ones(item[1]) * item[0])
           paddelarray = np.column_stack((np.arange(posinref, posinref + item[1]).reshape(item[1], 1), np.zeros(item[1]).reshape(item[1], 1)))
-          #print(paddelarray.shape)
           readarray = np.row_stack((np.row_stack((readarray[:posinread], paddelarray)), readarray[posinread:]))
           qualityarray = np.row_stack((qualityarray[: posinread], np.row_stack((np.zeros(item[1]).reshape(item[1], 1), qualityarray[posinread: ]))))
 
@@ -321,7 +308,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
         
         
         paddelarray = np.column_stack((tmppadnone, np.zeros(hardlen).reshape(hardlen, 1)))
-          #print(paddelarray.shape)
         if(posinread == 0):
           readarray = np.row_stack((paddelarray, readarray[posinread:]))
           qualityarray = np.row_stack((np.zeros(hardlen).reshape(hardlen, 1), qualityarray[posinread: ]))
@@ -340,10 +326,6 @@ def allocation(cigartuples, posinref, readarray, qualityarray, start, end):
       print(str(item[0]),' CIGAR TAG DONT SUPPORT ')
       return None
 
-
-  #readarray = readarray[slicestart: posinread + end - posinref]
-  
-  #print(cigarinfodict)
   if(posinref < end): #Need padding.
     readrearpadding = np.column_stack((np.arange(posinref, end).reshape(end - posinref, 1), np.zeros(end - posinref).reshape(end - posinref, 1)))
     readarray = np.row_stack((readarray, readrearpadding))
@@ -363,12 +345,7 @@ def paddel(AlignedSegment, start, end):
   i  = 0
   delpos = 0
 
-  '''print(readarray.T[0].tolist())
-  print(readarray.T[1].tolist())'''
-  #print(grp[-10:].T)
-
   cigartuples = AlignedSegment.cigartuples
-  #print(grp[-cigartuples[-1][1] - 10:].T)
   if(cigartuples == None):
     print('The alignment does not give CIGAR string')
     return None
@@ -381,10 +358,6 @@ def paddel(AlignedSegment, start, end):
 
     i = i + 1
 
-  '''if(grp[0] == None):#test for insertion or softclip on begin
-    tmpbase = np.array([readarray[0][0] - 1, 0]).reshape(1,2)
-    readarray = np.row_stack((tmpbase, readarray))'''
-  #print('origin readarray is ', readarray.T.tolist())
   qqarray = np.array(AlignedSegment.query_qualities)
   if(qqarray.size == 1):
     qqarray = np.zeros((readarray.shape[0], 1))
@@ -418,7 +391,6 @@ def dropselectcigartag(pcigararray, selectedtag, refseq, filter = False, preadar
   return np.sort(np.array(list(outputset)))
 
 def myshow(preadarray, pcigararray, qualityarray, refseq, seqbase, excludelist = [1, 4, 4.1], includecagtag = [2], filter = False, cutvalue = 1, maxdot = 200, softread = [], showpic = False, minrow = 18, maxrow = 18):
-  #print(preadarray.shape, pcigararray.shape, qualityarray.shape)
   pltsoft = False
   if(len(softread) > 0):
     psoftarray = (np.array(softread[:,1]).reshape(preadarray.shape[0], 1).astype('float32') * (preadarray > 0).astype('float32'))
@@ -552,8 +524,6 @@ def pileupf(bamfile, contig, start, end, droplq = False, dropvalue = 0.8):
     qualitylist.append(qualityarray.flatten().astype('float32'))
     softcliplist.append(softclipinfo)
     depth = depth + 1
-    '''print(read.shape)
-    print(cigararray.shape)'''
 
     if(type(iarray) != np.ndarray):
       continue
@@ -569,17 +539,7 @@ def pileupf(bamfile, contig, start, end, droplq = False, dropvalue = 0.8):
         insertinfo[item[0]] = item[1]
         keylist.append(item[0])
       lastloc = cloc
-  #print('fetch time = ', time.time() - fetchtime, time.time() - totalstarttime)
-  
   keylist = np.sort(np.array(keylist))
-
-  #print(keylist)
-  '''print(readlist)
-  print()
-  print(insertinfo)'''
-
-  #print(insertinfo)
-  #readposlist = [0 for i in range(len(readlist))]
 
   refseq = np.arange(start, end)
   bias = 0
@@ -612,7 +572,6 @@ def pileupf(bamfile, contig, start, end, droplq = False, dropvalue = 0.8):
 
       for key in keylist:
 
-        #print(insertlist[readcount][insertcount])
         while(True):
           slicelength = key + 1 - refloc
           refloc = refloc + slicelength
@@ -661,7 +620,6 @@ def pileupf(bamfile, contig, start, end, droplq = False, dropvalue = 0.8):
 
         parray = np.column_stack((parray, np.array([read[locinread: ], cigarlist[readcount][locinread: ], qualitylist[readcount][locinread: ]])))
         
-        #print()
       else:
 
         parray = np.array([read[locinread: ], cigarlist[readcount][locinread: ], qualitylist[readcount][locinread: ]])
@@ -671,19 +629,12 @@ def pileupf(bamfile, contig, start, end, droplq = False, dropvalue = 0.8):
       if(state):
 
         pallarray = np.column_stack((pallarray, parray))
-        #print(parray.shape)
-
-
-          
       else:
 
         pallarray = parray
         readlength = parray.shape[1]
         state = True
         
-  
-  #print('readlisttime',time.time() - readlisttime)
-  #print(time.time() - totalstarttime, paddeltime)
   
   return pallarray[0].reshape(int(pallarray.shape[1] / readlength), readlength), pallarray[1].reshape(int(pallarray.shape[1] / readlength), readlength), pallarray[2].reshape(int(pallarray.shape[1] / readlength), readlength), refseq, np.array(softcliplist, dtype = 'object'), seqbase
 def fx(alist, blist, clist, rowcount):
@@ -848,7 +799,6 @@ def fast_info_P(mdtaglist, cigarlist, corposlist, end, qualityarray, maxcountrea
 
             if(inmatch):
                 loc += matchnumber
-            #print(matchnumber)
                 matchnumber = 0
                 inmatch = False 
 
@@ -1188,7 +1138,6 @@ def c_c_withsa(mdtaglist, cigarlist, corposlist, tstart, end, primaryreadidconti
 
             if(inmatch):
                 loc += matchnumber
-            #print(matchnumber)
                 matchnumber = 0
                 inmatch = False 
 
@@ -1355,7 +1304,6 @@ def c_c_nosa(mdtaglist, cigarlist, corposlist, tstart, end, svtype, qualityarray
 
             if(inmatch):
                 loc += matchnumber
-            #print(matchnumber)
                 matchnumber = 0
                 inmatch = False 
 

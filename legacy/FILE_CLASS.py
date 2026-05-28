@@ -7,16 +7,16 @@ import pysam
 class File:
 
     def get_vcf_file(self, vcf_path, variants):
-        # 读取 CSV（而不是 VCF）
-        variants_pos = pd.read_csv(vcf_path, sep=",")  # 自动识别 chr, position 两列
+        # Read the CSV-formatted candidate table instead of a VCF.
+        variants_pos = pd.read_csv(vcf_path, sep=",")
 
         vcf_detail = []
 
         if variants == 'whole':
             for _, row in variants_pos.iterrows():
-                chr_id = str(row["chr"])           # 映射成 CHROM
-                scan_l_pos = int(row["position"])  # 映射成 POS
-                scan_r_pos = scan_l_pos + 1000     # 人工生成 END
+                chr_id = str(row["chr"])
+                scan_l_pos = int(row["position"])
+                scan_r_pos = scan_l_pos + 1000
                 vcf_tuples = (chr_id, scan_l_pos, scan_r_pos)
                 vcf_detail.append(vcf_tuples)
             return vcf_detail
@@ -28,7 +28,6 @@ class File:
             print("bam_file is empty")
             return
         return sam_file
-
 
 
 

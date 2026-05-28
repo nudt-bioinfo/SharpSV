@@ -8,7 +8,7 @@ import multiprocessing as mp
 
 
 # ==========================================
-# 模块 1: 统计模块 (增强版)
+# Module 1: BAM statistics
 # ==========================================
 class BamStatCalculator:
     def __init__(self, bam_path, sample_size=50000):
@@ -25,16 +25,16 @@ class BamStatCalculator:
                 count = 0
                 for read in bam:
                     if count >= self.sample_size: break
-                    # 必须是正常配对且不在同一位置
+                    # Use only reliable intra-chromosomal proper pairs.
                     if read.is_proper_pair and not read.is_duplicate and read.mapping_quality > 20:
                         if read.next_reference_id == read.reference_id and read.next_reference_start > read.reference_start:
                             tlen = abs(read.template_length)
-                            # 排除极其离谱的长片段，只统计正常分布
+                            # Ignore extreme fragments when estimating the insert profile.
                             if tlen < 2000:
                                 inserts.append(tlen)
                                 count += 1
             if inserts:
-                # 使用中位数和MAD估算，比Mean/Std更抗干扰
+                # Median-based insert estimation is more robust to noisy tails.
                 self.mean = np.median(inserts)
                 self.std = np.std(inserts)
                 print(f"[Info] Bam Stats -> Mean: {self.mean:.2f}, STD: {self.std:.2f}")
@@ -45,7 +45,7 @@ class BamStatCalculator:
 
 
 # ==========================================
-# 模块 2: 终极重比对引擎 (混合模式)
+# Module 2: hybrid DEL refiner
 # ==========================================
 class SpritesRefiner:
     def __init__(self, bam_path, ref_path, insert_mean, insert_std):
@@ -55,12 +55,12 @@ class SpritesRefiner:
         self.insert_std = insert_std
         self.aligner = self._build_aligner()
 
-        # 搜索参数
-        self.search_windows = [100, 500, 1000] #100
+        # Search parameters.
+        self.search_windows = [100, 500, 1000]
         self.min_clip_len = 5
-        self.min_mapq = 20  # 新增：MapQ 阈值
+        self.min_mapq = 20
 
-        # 判定 Discordant Pair 的阈值 (Mean + 3*STD)
+        # Threshold for discordant-pair rescue.
         self.discordant_threshold = self.insert_mean + (3 * self.insert_std)
 
     def _build_aligner(self):
@@ -91,10 +91,9 @@ class SpritesRefiner:
         if not len_list: return None
 
         if method == "median":
-            # 对于 Insert Size 推断，直接取中位数
             return int(np.median(len_list))
 
-        # 对于 Split Reads，使用聚类
+        # Cluster split-read estimates before taking the consensus.
         if len(len_list) == 1: return len_list[0]
         len_list.sort()
         clusters = []
@@ -108,22 +107,21 @@ class SpritesRefiner:
         clusters.append(current_cluster)
         best_cluster = max(clusters, key=len)
 
-        # 去噪逻辑
+        # Suppress isolated outliers when the evidence set is larger.
         if len(best_cluster) < 2 and len(len_list) > 3: return None
         return int(np.median(best_cluster))
 
     def refine_deletion(self, vcf_chrom, vcf_pos, vcf_end):
         """
-        返回: (Length, Method)
-        Method: 'SR' (Split Read), 'DP' (Discordant Pair), None
+        Return (refined_length, method).
+        Method is 'SR' for split-read refinement or 'DP' for discordant-pair rescue.
         """
 
-        # --- 阶段 1: 尝试 Split Read (SR) 精修 ---
+        # Stage 1: precise split-read refinement.
         sr_lens = []
         for radius in self.search_windows:
             if len(sr_lens) >= 5: break
 
-            # 安全范围
             start = max(0, vcf_pos - radius)
             end = vcf_pos + radius
 
@@ -133,7 +131,7 @@ class SpritesRefiner:
                 continue
 
             for read in reads:
-                # 基础过滤：去重、MapQ
+                # Basic read filtering.
                 if read.is_unmapped or read.is_duplicate or read.mapping_quality < self.min_mapq:
                     continue
                 if not read.is_proper_pair:
@@ -145,7 +143,6 @@ class SpritesRefiner:
                 mate_pos = read.next_reference_start
                 if read.next_reference_id != read.reference_id: continue
 
-                # 逻辑与之前相同，寻找 target region
                 target_start, target_end = 0, 0
                 if direction == 'right' and abs(anchor_pos - vcf_pos) < radius:
                     if mate_pos < anchor_pos: continue
@@ -161,12 +158,10 @@ class SpritesRefiner:
 
         consensus_sr = self.get_consensus_len(sr_lens, method="cluster")
 
-        # 如果 Split Read 找到了可靠结果，直接返回 (PRECISE)
         if consensus_sr is not None:
             return consensus_sr, 'SR'
 
-        # --- 阶段 2: 救回模式 - Discordant Pairs (DP) ---
-        # 如果 SR 失败，尝试用 Insert Size 救回
+        # Stage 2: discordant-pair rescue when split-read evidence is absent.
         dp_lens = self.rescue_by_discordant_pairs(vcf_chrom, vcf_pos, vcf_end)
         consensus_dp = self.get_consensus_len(dp_lens, method="median")
 
@@ -177,16 +172,14 @@ class SpritesRefiner:
 
     def rescue_by_discordant_pairs(self, chrom, start, end):
         """
-        利用 Insert Size 异常大的 Read Pairs 推断缺失长度
-        原理: Observed_TLEN = Physical_Insert + Deletion_Size
-             Deletion_Size = Observed_TLEN - Mean_Insert
+        Estimate deletion length from abnormally large template lengths.
+        Observed_TLEN = physical_insert + deletion_size
         """
         estimated_lens = []
 
-        # 搜索范围：覆盖整个预估的 Deletion 区域
-        # 我们只看 Start 附近的 Reads，因为它们会跨越到 End 后面
-        search_start = max(0, start - 200) #200
-        search_end = start + 200 #200
+        # Search around the left breakpoint where spanning pairs are expected.
+        search_start = max(0, start - 200)
+        search_end = start + 200
 
         try:
             reads = self.bam.fetch(chrom, search_start, search_end)
@@ -194,28 +187,21 @@ class SpritesRefiner:
             return []
 
         for read in reads:
-            # 1. 基础过滤
+            # Basic filtering.
             if read.is_unmapped or read.is_duplicate or read.mapping_quality < self.min_mapq:
                 continue
-            if not read.is_proper_pair:  # 有些比对软件对大 DEL 仍标记为 proper，有些则否，视情况而定
+            if not read.is_proper_pair:
                 pass
 
-                # 2. 必须是跨越断点的 Pair
-            # Read 在 Start 左边，Mate 在 End 右边 (大概)
-            # 或者简单判断：Template Length 是否显著异常
             tlen = abs(read.template_length)
 
             if tlen > self.discordant_threshold:
-                # 3. 计算预估长度
-                # 粗略公式：Del_Len = TLEN - Mean_Insert
-                # 过滤掉过大的噪音 (比如 > 50kb，除非预期很大)
+                # Approximate deletion length from the insert-size excess.
                 est_len = tlen - self.insert_mean
 
-                # 简单的合理性检查: 估算的长度应该和 VCF 里的原始长度在同一个数量级，或者至少 > 50bp
                 if 50 < est_len < 100000:
                     estimated_lens.append(est_len)
 
-        # 只有当发现一定数量的证据时才采信 (例如至少 3 对)
         if len(estimated_lens) >= 3:
             return estimated_lens
         return []
@@ -302,7 +288,7 @@ def refine_del_records_parallel(del_tasks, bam_path, ref_path, insert_mean, inse
 
 
 # ==========================================
-# 模块 3: 主流程
+# Module 3: CLI flow
 # ==========================================
 def main(argv=None):
     parser = argparse.ArgumentParser()
@@ -348,7 +334,6 @@ def main(argv=None):
     for idx, record in enumerate(vcf_in):
         counts['total'] += 1
 
-        # 1. 仅处理 DEL
         is_del = (record.info.get('SVTYPE') == 'DEL') or \
                  (record.alts and '<DEL>' in str(record.alts[0]))
         if not is_del:
@@ -360,27 +345,22 @@ def main(argv=None):
 
         refined_len, method = refine_results.get(idx, (None, None))
 
-        # 3. 结果处理
         if refined_len is None:
             counts['drop_fp'] += 1
             vcf_out.write(record)
             counts['kept'] += 1
             continue
 
-        # 更新 VCF 记录
         record.info['SVLEN'] = -refined_len
         record.info['SPRITES_LEN'] = -refined_len
         record.stop = record.pos + refined_len
 
-        # 记录证据类型
         record.info['EVIDENCE'] = method
 
         if method == 'SR':
-            # Split Read 证据确凿，移除 IMPRECISE 标记 (如果是 Precise)
             if 'IMPRECISE' in record.info:
                 del record.info['IMPRECISE']
         elif method == 'DP':
-            # Discordant Pair 救回的结果，标记为 IMPRECISE
             record.info['IMPRECISE'] = True
             counts['rescued_dp'] += 1
 

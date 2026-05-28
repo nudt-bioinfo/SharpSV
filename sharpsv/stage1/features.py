@@ -21,7 +21,7 @@ def baseinfo_guess(bamfile, contig, start, end, feature_count, maxcountread):
     qualityarray = []
     for AlignedSegment in bamfile.fetch(contig, start, end):
         read_length = AlignedSegment.infer_read_length()
-        if read_length is not None and read_length > 0: # 24 25 行 为新增代码
+        if read_length is not None and read_length > 0:
             qualityarray.append([AlignedSegment.query_alignment_length / AlignedSegment.infer_read_length(),
                              AlignedSegment.query_alignment_length, AlignedSegment.mapping_quality])
             mdtaglist.append(AlignedSegment.get_tag('MD'))
@@ -75,7 +75,6 @@ def guess_summary_depth(bamfilepath, times, window_size=1000, feature_count=9):
                 data, tmptrustsumary = baseinfo_guess(bamfile, contig, start, start + window_size, feature_count, 2)
                 meanlist.append(data.flatten())
             except:
-                # print('Bad luck')
                 continue
             break
 
@@ -109,7 +108,6 @@ def guess_summary(bamfilepath, times, workdir, window_size=1000, feature_count=9
                 meanlist.append(data.flatten())
 
             except:
-                # print('Bad luck')
                 continue
             break
 
@@ -132,9 +130,9 @@ def combinelist(listoflist):  # require same type
 
 def decode_flag(flag):
     """
-    解析 BAM flag 以确定二代测序 reads 的比对方向
-    - 1: 负链（reverse strand）
-    - 2: 正链（forward strand）
+    Decode a BAM flag into a strand code for short-read alignments.
+    - 1: reverse strand
+    - 2: forward strand
     """
     return 1 if (flag & 16) else 2
 
@@ -232,7 +230,7 @@ def baseinfo_AlignedSegment(genotype, bamfilepath, contig, r_start, r_end, meanv
             preend = reference_end
 
             read_length = AlignedSegment.infer_read_length()
-            if read_length is not None and read_length > 0: # 198 199 行 为新增代码
+            if read_length is not None and read_length > 0:
                 qualityarray.append([AlignedSegment.query_alignment_length / AlignedSegment.infer_read_length(),
                                  AlignedSegment.query_alignment_length, AlignedSegment.mapping_quality])
                 if (AlignedSegment.has_tag('MD') == True):

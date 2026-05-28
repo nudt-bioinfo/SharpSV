@@ -25,12 +25,12 @@ import pysam
 
 
 # ==========================================
-# 1. 核心组件：CBAM (通道+空间注意力机制)
+# 1. Core component: CBAM (channel + spatial attention)
 # ==========================================
 class CBAM(nn.Module):
     def __init__(self, channels, reduction=16):
         super(CBAM, self).__init__()
-        # 通道注意力 (Channel Attention)
+        # Channel attention.
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         self.max_pool = nn.AdaptiveMaxPool1d(1)
         self.fc = nn.Sequential(
@@ -40,8 +40,7 @@ class CBAM(nn.Module):
         )
         self.sigmoid = nn.Sigmoid()
 
-        # 空间注意力 (Spatial Attention)
-        # kernel_size=7 增大感受野，精准定位变异位置
+        # Spatial attention with a wider receptive field.
         self.conv_spatial = nn.Conv1d(2, 1, kernel_size=7, padding=3, bias=False)
 
     def forward(self, x):
@@ -62,14 +61,14 @@ class CBAM(nn.Module):
 
 
 # ==========================================
-# 2. 核心组件：多尺度卷积 (Multi-Scale Conv)
+# 2. Core component: multi-scale convolution
 # ==========================================
 class MultiScaleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         quarter_c = out_channels // 4
 
-        # 并行使用不同大小的卷积核，捕捉不同长度的 SV
+        # Parallel kernels capture SV signals across multiple scales.
         self.branch1 = nn.Conv1d(in_channels, quarter_c, kernel_size=1)
         self.branch2 = nn.Conv1d(in_channels, quarter_c, kernel_size=3, padding=1)
         self.branch3 = nn.Conv1d(in_channels, quarter_c, kernel_size=5, padding=2)
@@ -89,20 +88,20 @@ class MultiScaleConv(nn.Module):
 
 
 # ==========================================
-# 3. 全新模型架构：AdvancedSVModel
+# 3. Stage-1 model architecture
 # ==========================================
 class AdvancedSVModel(nn.Module):
     def __init__(self, in_channels=9, base_filters=64):
         super().__init__()
 
-        # Stem: 多尺度特征提取 + 注意力加权
+        # Stem: multi-scale feature extraction plus attention weighting.
         self.stem = nn.Sequential(
             MultiScaleConv(in_channels, base_filters),
             CBAM(base_filters),
             nn.MaxPool1d(2)  # 1000 -> 500
         )
 
-        # Layer 1: 深层特征提取
+        # Layer 1: deeper feature extraction.
         self.layer1 = nn.Sequential(
             nn.Conv1d(base_filters, base_filters * 2, 3, padding=1),
             nn.BatchNorm1d(base_filters * 2),
@@ -111,7 +110,7 @@ class AdvancedSVModel(nn.Module):
             nn.MaxPool1d(2)  # 500 -> 250
         )
 
-        # Layer 2: 更深层
+        # Layer 2: deeper hierarchical features.
         self.layer2 = nn.Sequential(
             nn.Conv1d(base_filters * 2, base_filters * 4, 3, padding=1),
             nn.BatchNorm1d(base_filters * 4),
@@ -120,14 +119,14 @@ class AdvancedSVModel(nn.Module):
             nn.MaxPool1d(2)  # 250 -> 125
         )
 
-        # 混合池化 (Hybrid Pooling)
+        # Hybrid pooling.
         self.global_max_pool = nn.AdaptiveMaxPool1d(1)
         self.global_avg_pool = nn.AdaptiveAvgPool1d(1)
 
-        # 分类头
+        # Classification head.
         self.fc = nn.Sequential(
             nn.Dropout(0.3),
-            # 输入维度是 max + avg 拼接后的结果
+            # Input width equals max-pooled plus avg-pooled features.
             nn.Linear(base_filters * 4 * 2, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -140,7 +139,7 @@ class AdvancedSVModel(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
 
-        # 混合聚合：同时看最强信号(Max)和整体背景(Avg)
+        # Use both the strongest signal and the global context.
         max_feat = self.global_max_pool(x).flatten(1)
         avg_feat = self.global_avg_pool(x).flatten(1)
         feat = torch.cat([max_feat, avg_feat], dim=1)
@@ -148,16 +147,16 @@ class AdvancedSVModel(nn.Module):
         logits = self.fc(feat)
         probs = torch.sigmoid(logits)
 
-        # 为了兼容旧接口返回三个值，后两个作为占位符
+        # Preserve the legacy three-value return signature.
         return probs, probs, probs
 
 
 # ==========================================
-# 4. 损失函数 (Focal Loss)
+# 4. Loss function
 # ==========================================
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.20, gamma=2.0):
-        # alpha=0.25 在测试集极其不平衡的情况下表现出了最好的泛化能力
+        # Alpha balances the highly imbalanced negative-heavy regime.
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -171,7 +170,7 @@ class FocalLoss(nn.Module):
 
 
 # ==========================================
-# 5. 数据集 (SharpSVDataset)
+# 5. Dataset
 # ==========================================
 class SharpSVDataset(Dataset):
     def __init__(self, data_dirs, chromosomes=None, mode="train", vcf_path=None, verbose=True):
@@ -197,10 +196,7 @@ class SharpSVDataset(Dataset):
         if self.mode == "train":
             return [str(i) for i in range(1, 11)] + ['X', 'Y']
         elif self.mode == "test":
-            # return ([str(i) for i in range(11, 13)])
-            # return ([str(i) for i in range(13, 23)])  #2026.02.27 这里修改test用于筛出来13-22困难负样本
-            # return ([str(i) for i in range(11, 13)])  # 2026.02.28 这里修改test用于筛出来1-10困难负样本
-            return ([str(i) for i in range(1, 23)]) + ['X', 'Y'] # 2026.05.09 这里用于直接测试chm1_chm13
+            return ([str(i) for i in range(1, 23)]) + ['X', 'Y']
         else:
             raise ValueError("Invalid mode!")
 
@@ -232,25 +228,16 @@ class SharpSVDataset(Dataset):
             if chrom not in self.chromosomes:
                 continue
 
-            # try:
-            #     data_dict = np.load(file, allow_pickle=True)
-            #     data = data_dict['data']
-            #     labels = data_dict['label']
-            #     indices = data_dict['index']
-            # except KeyError as e:
-            #     print(f"Skipping {file}: {e}")
-            #     continue
-
             try:
                 data_dict = np.load(file, allow_pickle=True)
                 data = data_dict['data']
                 indices = data_dict['index']
 
-                # ✅ 修改点：如果不存在 label，则生成全 0 的伪标签
+                # Prediction-only files may omit labels.
                 if 'label' in data_dict:
                     labels = data_dict['label']
                 else:
-                    # 预测模式下，我们不需要真实标签，创建一个占位符即可
+                    # Use placeholder labels for inference-only data.
                     labels = np.zeros(len(data), dtype=np.int64)
 
             except KeyError as e:
@@ -276,7 +263,7 @@ class SharpSVDataset(Dataset):
                     sampled_idx = np.random.choice(idx_zeros, min(100, len(idx_zeros)), replace=False)
                 else:
                     num_anomalies = len(idx_ones)
-                    # 保持 1:1 的训练采样，依靠 alpha=0.25 来处理泛化问题
+                    # Keep a 1:1 class ratio during training.
                     num_normals_to_sample = min(len(idx_zeros), num_anomalies * 1)
                     sampled_normals = np.random.choice(idx_zeros, num_normals_to_sample, replace=False)
                     sampled_idx = np.concatenate([idx_ones, sampled_normals])
@@ -311,18 +298,17 @@ class SharpSVDataset(Dataset):
         y = self.labels[idx]
         chr_name, pos = self.indices[idx]
 
-        # ✅ 关键修改：直接reshape为 (1000, 9) 然后转置为 (9, 1000) 以适配 Conv1d
-        # 假设原始数据是 1000行 * 9列 展平的
-        x = x.view(1000, 9).permute(1, 0)  # 结果 shape: (9, 1000)
+        # Restore the flattened 1000x9 window into Conv1d format.
+        x = x.view(1000, 9).permute(1, 0)  # Shape: (9, 1000)
 
         return x, y, (chr_name, pos)
 
 
 def load_sharpsv_data(data_dir, batch_size=64, train_chromosomes=None, test_chromosomes=None, vcf_path=None):
     train_dataset = SharpSVDataset(data_dir, train_chromosomes, mode="train", vcf_path=vcf_path)
-    print(f"训练集加载完成，共包含 {len(train_dataset)} 个样本。")
+    print(f"Training dataset loaded with {len(train_dataset)} samples.")
     test_dataset = SharpSVDataset(data_dir, test_chromosomes, mode="test")
-    print(f"测试集加载完成，共包含 {len(test_dataset)} 个样本。")
+    print(f"Test dataset loaded with {len(test_dataset)} samples.")
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
@@ -330,13 +316,13 @@ def load_sharpsv_data(data_dir, batch_size=64, train_chromosomes=None, test_chro
 
 
 # ==========================================
-# 6. Lightning Module
+# 6. Lightning module
 # ==========================================
 class SharpSVLightningModel(pl.LightningModule):
 
     def __init__(self, path, config, predict_mode=False, prediction_output_csv=None):
         super(SharpSVLightningModel, self).__init__()
-        self.save_hyperparameters()  # 推荐增加这一行
+        self.save_hyperparameters()
         self.model = AdvancedSVModel(in_channels=9, base_filters=64)
         self.path = path
         self.criterion = FocalLoss(alpha=0.20, gamma=2.0)
@@ -353,7 +339,7 @@ class SharpSVLightningModel(pl.LightningModule):
         self.validation_step_outputs = []
         self.test_step_outputs = []
 
-        # ✅ 只有非预测模式才加载训练/验证数据
+        # Only build training loaders outside prediction mode.
         if not self.predict_mode:
             self.train_loader, self.val_loader = load_sharpsv_data(self.path, self.batch_size)
 
@@ -368,7 +354,7 @@ class SharpSVLightningModel(pl.LightningModule):
 
     def training_validation_step(self, batch, batch_idx):
         x, y, index = batch
-        # AdvancedSVModel 返回 (probs, probs, probs)
+        # AdvancedSVModel preserves the legacy triple return signature.
         bag_pred, _, _ = self.model(x)
         loss = self.criterion(bag_pred.squeeze(), y.float())
         return loss, y, bag_pred.squeeze(), index
@@ -428,7 +414,7 @@ class SharpSVLightningModel(pl.LightningModule):
 
         all_y, all_probs, index_list = [], [], []
 
-        # 1. 第一遍循环：收集所有得分和索引
+        # Pass 1: collect scores and indices.
         for out in self.validation_step_outputs:
             all_y.extend(torch.as_tensor(out['y']).cpu().numpy().reshape(-1).tolist())
             yh = out['y_hat']
@@ -450,14 +436,13 @@ class SharpSVLightningModel(pl.LightningModule):
             self.validation_step_outputs.clear()
             return
 
-        # 2. ✅ 核心修改：动态计算 Top 10% 的阈值
+        # Pass 2: compute the dynamic top-10% threshold in prediction mode.
         if hasattr(self, "predict_mode") and self.predict_mode:
-            # 使用 np.percentile 找出 90% 的分位点（即得分最高的前 10%）
             dynamic_threshold = np.percentile(all_probs, 90)
             self.best_threshold = float(dynamic_threshold)
-            print(f"🚀 [Top 10% Mode] Dynamic threshold set to: {self.best_threshold:.4f}")
+            print(f"[Top 10% Mode] Dynamic threshold set to: {self.best_threshold:.4f}")
         else:
-            # 训练模式下依然执行原有的最佳阈值搜索逻辑
+            # Training mode still performs threshold search.
             candidate_thresholds = np.linspace(0.01, 0.99, 99)
             best_t, best_metric = self.best_threshold, -1.0
             for t in candidate_thresholds:
@@ -468,7 +453,7 @@ class SharpSVLightningModel(pl.LightningModule):
                     best_metric, best_t = cm, t
             self.best_threshold = float(best_t)
 
-        # 3. 后续保存逻辑（保持不变，它会自动使用新计算的 self.best_threshold）
+        # Pass 3: save outputs using the updated threshold.
         final_preds = (all_probs >= self.best_threshold).astype(int)
         metric = classification_report(all_y, final_preds, output_dict=True, zero_division=0)
 
@@ -480,7 +465,7 @@ class SharpSVLightningModel(pl.LightningModule):
         self.log('validation_1_pre', p1, on_epoch=True, prog_bar=True)
         self.log('custom_metric', custom_metric, on_epoch=True, prog_bar=True)
 
-        # ✅ 核心修改：安全报告 Tune 指标，防止报错退出
+        # Report Tune metrics only when a Tune session is active.
         try:
             from ray import tune
             if tune.is_session_enabled():

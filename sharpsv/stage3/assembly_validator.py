@@ -151,14 +151,14 @@ def extract_raw_signal_adaptive(bam, chrom, start, end, sv_type, pad=370):
 
 
 # ==========================================
-# 2. RP - 锁定最佳的统计学边界
+# 2. Read-pair signal
 # ==========================================
 def extract_rp_signal_adaptive(bam, chrom, start, end, isize_mean, isize_std, sv_type):
     abnormal = 0.0
     total = 0
     seen = set()
 
-    # [调整] 1.95 倍标准差：比 2.0 敏感，比 1.8 准确，是最优平衡点
+    # Use 1.95 standard deviations as a balanced sensitivity/specificity cutoff.
     thresh_high = isize_mean + 1.95 * isize_std
     thresh_low = isize_mean - 1.95 * isize_std
 
@@ -189,7 +189,7 @@ def extract_rp_signal_adaptive(bam, chrom, start, end, isize_mean, isize_std, sv
 
 
 # ==========================================
-# 3. Assembly - 排除随机组装噪音
+# 3. Assembly support
 # ==========================================
 def analyze_assembly_adaptive(bam, chrom, start, end, sv_type, predicted_len, avg_read_len):
     try:
@@ -205,9 +205,9 @@ def analyze_assembly_adaptive(bam, chrom, start, end, sv_type, predicted_len, av
     clean_ref = 0
     total_valid = 0
 
-    # [收紧] 要求至少 8bp 变异才能视为 SV 证据，防止将小 Indel 误判为大型 SV
+    # Ignore very small events to avoid promoting incidental indels as SVs.
     MIN_SV_LEN = max(8, int(predicted_len * 0.025), int(avg_read_len * 0.06))
-    # [收紧] 容差范围回到 300，太宽容易引入随机错误
+    # Keep the positional tolerance tight enough to suppress random noise.
     slop = max(300, int(predicted_len * 0.20))
 
     for read in reads:
@@ -255,7 +255,7 @@ def analyze_assembly_adaptive(bam, chrom, start, end, sv_type, predicted_len, av
     if has_sv:
         return 'VERIFIED', best_refine
 
-    # [严格界定 REF] 只要有超过 35% 的 reads 是干净比对，就先将其判为 REF，后续用极严逻辑排查
+    # Treat regions with substantial clean reference support as reference-like.
     if total_valid > 0 and clean_ref / total_valid > 0.35:
         return 'REF', None
 
@@ -263,7 +263,7 @@ def analyze_assembly_adaptive(bam, chrom, start, end, sv_type, predicted_len, av
 
 
 # ==========================================
-# 4. 主流程 - 双重证据验证 (Dual-Evidence)
+# 4. Main validation flow
 # ==========================================
 def validate_assembly_candidates(
     csv_path,
@@ -316,11 +316,11 @@ def validate_assembly_candidates(
         final_decision = "DROP"
         new_row = row.copy()
 
-        # 计算自适应高阈值 (上限 12%)
+        # Cap the adaptive VAF threshold at 12%.
         adaptive_vaf = max(min_vaf, min(0.12, global_depth * 0.002))
 
         if asm_status == 'VERIFIED':
-            # 【二次质控】即使组装认为有SV，如果底层测序数据连 1.0 的痕迹都没有，按假阳性Drop
+            # Drop assembly-only calls when raw read evidence is effectively absent.
             if raw_support < 1.0 and rp_abnormal < 1.0:
                 final_decision = "DROP"
                 stats['drop_noise'] += 1
@@ -336,7 +336,7 @@ def validate_assembly_candidates(
                         new_row['length_bp'] = int(r_len)
 
         elif asm_status == 'REF':
-            # 【严苛斩杀】明确为 REF 的区域，必须具备极强的断点信号才予救援
+            # Reference-like regions require very strong rescue evidence.
             if raw_vaf >= 0.10 and raw_support >= 5.0:
                 final_decision = "KEEP"
                 stats['kept_rescue'] += 1
@@ -345,14 +345,13 @@ def validate_assembly_candidates(
                 stats['drop_ref'] += 1
 
         else:  # AMBIGUOUS
-            # 策略 A: 极强的单维度 CIGAR/Clip 证据
+            # Strategy A: strong single-channel CIGAR/clip evidence.
             strong_raw = (raw_vaf >= adaptive_vaf and raw_support >= 5.0)
 
-            # 策略 B: 极强的单维度 Read Pair 证据
+            # Strategy B: strong single-channel read-pair evidence.
             strong_rp = (rp_ratio >= 0.08 and rp_abnormal >= 3.0)
 
-            # 策略 C: 双重证据 (Dual-Evidence) - 这是提升 Recall 且不掉 Precision 的核心
-            # 当两个独立指标同时给出弱信号(>4.5%)时，合并判定为真
+            # Strategy C: dual-evidence rescue from two weaker but independent signals.
             dual_evidence = (raw_vaf >= 0.045 and raw_support >= 3.0) and (rp_ratio >= 0.045 and rp_abnormal >= 2.0)
 
             if strong_raw or strong_rp or dual_evidence:
@@ -408,7 +407,7 @@ def build_parser():
     parser.add_argument("--raw_bam", required=True)
     parser.add_argument("--asm_bam", required=True)
     parser.add_argument("--output", default="final_adaptive_validated.csv")
-    parser.add_argument("--min_vaf", type=float, default=0.065)  # 基础门槛定在 6.5%，保证精度
+    parser.add_argument("--min_vaf", type=float, default=0.065)
     return parser
 
 

@@ -3,7 +3,7 @@
 SharpSV is designed as a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data. The repository implementation follows the same core logic described in the manuscript: coarse screening, sequence-to-image encoding, spatial-sequential recognition, and breakpoint refinement, with an additional production-facing VCF finalization step for end-user output.
 
 <p align="center">
-  <img src="assets/fig1-workflow.png" alt="SharpSV workflow overview" width="1120">
+  <img src="assets/fig1-workflow.svg" alt="SharpSV workflow overview" width="1120">
 </p>
 
 <p align="center">

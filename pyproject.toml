@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sharpsv"
 version = "0.1.0"
-description = "Structural variant discovery pipeline with bundled stage models"
+description = "Structural variant discovery pipeline with release-backed pretrained stage models"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8,<3.9"
 license = { file = "LICENSE" }
@@ -70,5 +70,5 @@ zip-safe = false
 include = ["sharpsv*", "fermikit*"]
 
 [tool.setuptools.package-data]
-sharpsv = ["_bundle/models/*.bin", "_bundle/models/*.part-*", "_bundle/native/*.so"]
+sharpsv = ["_bundle/models/*.json", "_bundle/native/*.so"]
 fermikit = ["fermi.kit/*"]

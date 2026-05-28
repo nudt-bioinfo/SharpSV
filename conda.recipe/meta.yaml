@@ -42,6 +42,6 @@ test:
 
 about:
   home: https://github.com/sharpsv/sharpsv
-  summary: Structural variant discovery pipeline with bundled stage models and native backend
+  summary: Structural variant discovery pipeline with release-backed stage models and native backend
   license: MIT
   license_file: LICENSE

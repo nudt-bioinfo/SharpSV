@@ -45,8 +45,7 @@
 
 ### `sharpsv/_bundle/models/`
 
-- `stage1.model.bin`: packaged default stage-1 model asset.
-- `stage2.model.bin.part-*`: split packaged stage-2 model assets reconstructed into a runtime cache automatically.
+- `manifest.json`: release-backed model manifest with GitHub Release location, asset names, sizes, and SHA256 checksums.
 
 ### `sharpsv/_bundle/native/`
 

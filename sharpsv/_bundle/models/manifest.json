@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "release": {
+    "provider": "github",
+    "repo": "nudt-bioinfo/SharpSV",
+    "tag": "bundled-models-v0.1.0"
+  },
+  "models": {
+    "stage-1": {
+      "display_name": "SharpSV stage-1 pretrained checkpoint",
+      "filename": "stage1.model.bin",
+      "label": "bundled://stage1",
+      "override_flag": "--stage1-model",
+      "sha256": "0d84a34ce821bd72bfe9a023942526d1d6d4971d1f7456915ba41876cc3c7128",
+      "size_bytes": 2474291
+    },
+    "stage-2": {
+      "display_name": "SharpSV stage-2 pretrained checkpoint",
+      "filename": "stage2.model.bin",
+      "label": "bundled://stage2",
+      "override_flag": "--stage2-model",
+      "sha256": "6d70260bad5a5083097795dad4c3f4c524b52c02b8a81b387b87c317115a512c",
+      "size_bytes": 447513469
+    }
+  }
+}

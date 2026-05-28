@@ -125,11 +125,12 @@ def resolve_bundled_checkpoint(explicit_path, stage_label):
         return str(checkpoint_path), "override"
 
     try:
-        _bundled_probe, model_info = validate_bundled_model(stage_label)
+        validate_bundled_model(stage_label)
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"Bundled {stage_label} checkpoint not found: {exc}. "
-            f"Restore the packaged model asset or pass an override with {model_info['override_flag']}."
+            f"Upload the GitHub Release asset or pass an override with "
+            f"{'--stage1-model' if stage_label == 'stage-1' else '--stage2-model'}."
         )
     return resolve_bundled_model_ref(stage_label), "bundled"
 

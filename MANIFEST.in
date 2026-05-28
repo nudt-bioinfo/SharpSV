@@ -11,7 +11,6 @@ include sharpsv_stage3_sort_predictions.py
 include sharpsv_stage3_validate_assembly.py
 include sharpsv_stage4_export_vcf.py
 include sharpsv_stage4_realign_vcf.py
-recursive-include sharpsv/_bundle/models *.bin
-recursive-include sharpsv/_bundle/models *.part-*
+recursive-include sharpsv/_bundle/models *.json
 recursive-include sharpsv/_bundle/native *.so
 recursive-include fermikit/fermi.kit *

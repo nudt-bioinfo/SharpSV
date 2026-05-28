@@ -18,6 +18,13 @@ dist/
 .codex/
 .agents/
 
+# Bundled model payloads are intentionally distributed as GitHub Release assets, not git blobs
+sharpsv/_bundle/models/*.bin
+sharpsv/_bundle/models/*.part-*
+
+# Local manuscript / writing artifacts
+SharpSV_manuscript.doc
+
 # Nested vendored git metadata
 fermikit/**/.git/
 

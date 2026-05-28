@@ -7,7 +7,7 @@ This repository is prepared to be published as a user-facing SharpSV release rat
 The GitHub repository includes:
 
 - the full `SharpSV.py` end-to-end pipeline
-- packaged default stage-1 and stage-2 model assets
+- release-backed metadata for the default stage-1 and stage-2 model assets
 - the packaged native backend used by feature extraction
 - the packaged `fermikit` runtime required by stage-3 local assembly
 - `environment.yml`, `requirements.txt`, and Python packaging metadata for reproducible installation
@@ -16,17 +16,49 @@ End users can run SharpSV directly after environment setup without manually loca
 
 ## Bundled Model Strategy
 
-To keep the repository and wheel compatible with GitHub file-size limits:
+To keep the repository and wheel lightweight and GitHub-friendly:
 
-- the stage-1 bundled model is stored directly as `sharpsv/_bundle/models/stage1.model.bin`
-- the larger stage-2 bundled model is stored as split package assets:
-  - `stage2.model.bin.part-000`
-  - `stage2.model.bin.part-001`
-  - `stage2.model.bin.part-002`
-  - `stage2.model.bin.part-003`
-  - `stage2.model.bin.part-004`
+- the repository stores only `sharpsv/_bundle/models/manifest.json`
+- the actual pretrained checkpoints are uploaded to GitHub Release assets
+- SharpSV downloads the assets to the local cache on first use
+- each download is verified against the manifest SHA256 before it is accepted
 
-At runtime SharpSV reconstructs the stage-2 checkpoint into a temporary cache automatically. Users do not need to perform any manual merge step.
+The current manifest expects these release asset names:
+
+- `stage1.model.bin`
+- `stage2.model.bin`
+
+and the default release tag:
+
+- `bundled-models-v0.1.0`
+
+You can override the download base with `SHARPSV_BUNDLE_BASE_URL` if you host the assets elsewhere.
+
+## Creating The Model Release
+
+Before publishing the lightweight git repository, create a GitHub Release in `nudt-bioinfo/SharpSV` with tag:
+
+- `bundled-models-v0.1.0`
+
+and upload these two assets:
+
+- `stage1.model.bin`
+- `stage2.model.bin`
+
+Their manifest checksums are:
+
+- `stage1.model.bin`: `0d84a34ce821bd72bfe9a023942526d1d6d4971d1f7456915ba41876cc3c7128`
+- `stage2.model.bin`: `6d70260bad5a5083097795dad4c3f4c524b52c02b8a81b387b87c317115a512c`
+
+Suggested maintainer flow:
+
+1. Open the GitHub repository.
+2. Go to `Releases`.
+3. Create a new release with tag `bundled-models-v0.1.0`.
+4. Upload `stage1.model.bin` and `stage2.model.bin` as release assets.
+5. Publish the release.
+
+Once the release is live, a clean SharpSV install can fetch the models automatically on first run.
 
 ## Installation Paths
 
@@ -77,5 +109,5 @@ This allows long production runs to recover from interruption without recomputin
 ## Distribution Notes
 
 - Wheels are intentionally platform-specific because the packaged native backend `.so` is included.
-- `setup.py` contains a small packaging guard to prevent stale reconstructed model files from being accidentally re-bundled during repeated local builds.
+- the model repository payload is now limited to a JSON manifest, so release assets no longer inflate git history or wheel contents
 - `conda.recipe/meta.yaml` reuses `pip install .` so wheel and conda distribution paths stay aligned.

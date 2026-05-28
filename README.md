@@ -5,7 +5,7 @@ SharpSV is a structural variant discovery pipeline for sorted, indexed BAM files
 ## Highlights
 
 - full end-to-end pipeline from BAM to final VCF
-- bundled pretrained stage-1 and stage-2 models
+- release-backed pretrained stage-1 and stage-2 models
 - packaged native backend and packaged `fermikit` runtime
 - GPU-aware stage-1 and stage-2 inference
 - resume-aware execution for interrupted long runs
@@ -48,13 +48,15 @@ python SharpSV.py \
   -output ./SharpSV.vcf
 ```
 
-The default bundled models are used automatically. Advanced users can override them:
+The default bundled models are used automatically. On the first run, SharpSV downloads the stage checkpoints from the SharpSV GitHub Release assets into the local cache and verifies them with SHA256 before inference starts. Advanced users can override them:
 
 ```bash
 python SharpSV.py ... \
   --stage1-model /path/to/custom_stage1.ckpt \
   --stage2-model /path/to/custom_stage2.ckpt
 ```
+
+By default the model cache lives under `XDG_CACHE_HOME` or `/tmp/sharpsv-cache/bundled-models`. Maintainers can override the release download root with `SHARPSV_BUNDLE_BASE_URL`.
 
 ## Pipeline Outputs
 
@@ -77,8 +79,9 @@ This allows production runs to continue after interruption without recomputing f
 
 ## Packaging Notes
 
-- default models are shipped as package data under `sharpsv/_bundle/models/`
-- the large stage-2 bundled model is stored as split package assets and reconstructed into a temporary cache at runtime
+- the repository ships a model manifest under `sharpsv/_bundle/models/manifest.json`
+- pretrained checkpoints are fetched from GitHub Release assets on first use and cached locally
+- each downloaded checkpoint is verified against the manifest SHA256 before SharpSV uses it
 - the native backend `.so` is shipped under `sharpsv/_bundle/native/`
 - the `fermikit/fermi.kit/` runtime is shipped as package data for stage-3 assembly
 - `setup.py`, `pyproject.toml`, `MANIFEST.in`, and `conda.recipe/meta.yaml` are aligned so wheel and conda distribution include the same runtime assets
@@ -106,7 +109,7 @@ The codebase is organized by stage under `sharpsv/`.
 - `sharpsv/stage2/`: refinement pipeline, image helpers, refinement model
 - `sharpsv/stage3/`: sorting, local assembly, adaptive validation
 - `sharpsv/stage4/`: VCF export, DEL realignment, final VCF orchestration
-- `sharpsv/_bundle/models/`: packaged model assets
+- `sharpsv/_bundle/models/`: bundled model manifest for release-backed checkpoint downloads
 - `sharpsv/_bundle/native/`: packaged native backend
 - `sharpsv/utils/`: console and shared helpers
 - `legacy/`: archived compatibility modules

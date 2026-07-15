@@ -21,6 +21,7 @@ dependencies:
 
   - tqdm=4.66.5
   - hyperopt=0.2.7
+  - ray-tune=2.10.0
 
   # PyTorch
   - pytorch=2.4.1
@@ -32,7 +33,3 @@ dependencies:
   - pytorch-lightning=2.4.0
 
   - pip
-  - pip:
-      # Keep Ray on pip; the conda ray-tune package is a common solver failure point.
-      # Python 3.8 package indexes commonly stop at Ray 2.10.x.
-      - ray[tune]==2.10.0

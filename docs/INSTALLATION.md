@@ -17,6 +17,13 @@ End users do not need to train models or manually provide checkpoint paths for r
 For GPU deployments, the recommended installation path is the bundled conda environment:
 
 ```bash
+conda env create -n SharpSV -f environment.yml
+conda activate SharpSV
+```
+
+If you already have a `SharpSV` environment and want to refresh it:
+
+```bash
 conda env update -n SharpSV -f environment.yml --prune
 conda activate SharpSV
 ```
@@ -26,14 +33,15 @@ This environment pins:
 - Python 3.8
 - CUDA-capable PyTorch
 - PyTorch Lightning
-- `pysam`, `biopython`, `ray[tune]`, and other runtime dependencies
+- `pysam`, `biopython`, `ray-tune`, and other runtime dependencies
+- conda as the primary package manager for the runtime stack to reduce pip downloads and solver conflicts
 
 ## Install From Source
 
-After creating the environment, install SharpSV itself:
+After creating or updating the environment, install SharpSV itself without re-resolving dependencies:
 
 ```bash
-pip install .
+pip install --no-deps .
 ```
 
 This installs:

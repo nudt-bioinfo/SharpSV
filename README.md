@@ -36,19 +36,27 @@ The production codebase then appends a practical finalization stage that exports
 - Python `3.8`
 - CUDA-capable PyTorch `2.4.1`
 - PyTorch Lightning `2.4.0`
+- conda-managed Ray Tune and scientific runtime dependencies
 - packaged native backend loaded from `sharpsv/_bundle/native/`
 
-Create the recommended environment:
+Create the recommended environment from scratch:
+
+```bash
+conda env create -n SharpSV -f environment.yml
+conda activate SharpSV
+```
+
+If you already have a `SharpSV` environment and want to refresh it:
 
 ```bash
 conda env update -n SharpSV -f environment.yml --prune
 conda activate SharpSV
 ```
 
-Then install SharpSV:
+Then install SharpSV itself without asking `pip` to resolve the runtime stack again:
 
 ```bash
-pip install .
+pip install --no-deps .
 ```
 
 If you prefer a plain dependency list, `requirements.txt` mirrors the runtime stack. For a user-facing install guide, see [docs/INSTALLATION.md](docs/INSTALLATION.md). For repository and distribution notes, see [docs/GITHUB_RELEASE.md](docs/GITHUB_RELEASE.md).

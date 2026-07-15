@@ -65,9 +65,9 @@ Once the release is live, a clean SharpSV install can fetch the models automatic
 Recommended:
 
 ```bash
-conda env update -n SharpSV -f environment.yml --prune
+conda env create -n SharpSV -f environment.yml
 conda activate SharpSV
-pip install .
+pip install --no-deps .
 ```
 
 Alternative wheel build:

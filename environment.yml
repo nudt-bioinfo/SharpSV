@@ -34,4 +34,5 @@ dependencies:
   - pip
   - pip:
       # Keep Ray on pip; the conda ray-tune package is a common solver failure point.
-      - ray[tune]==2.23.0
+      # Python 3.8 package indexes commonly stop at Ray 2.10.x.
+      - ray[tune]==2.10.0

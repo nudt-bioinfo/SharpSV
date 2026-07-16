@@ -2,6 +2,8 @@
 
 SharpSV is a short-read SV detection tool based on site-centered hierarchical representation. It initiates by scanning whole-genome alignments via 1,000-bp sliding windows to extract read-alignment features, generating a series of contiguous signature matrices. Subsequently, a MIL framework performs coarse filtering to prune normal genomic backgrounds, nominating high-probability variant candidates. Then, the sequence-to-image stage encodes the candidate windows into 20 consecutive 50-bp VSP images. A spatial-sequential recognition network integrates convolutional encoding with transformer-based contextual modeling to decipher positional dependencies and identify SV types. Within the predicted intervals, SharpSV applies targeted local assembly and realignment to confirm sequence-precise breakpoints while effectively mitigating false positives. Consequently, SharpSV outputs the refined SV calls at base-pair resolution.
 
+This branch keeps the original real-data release workflow intact and adds an experimental `simulated-5class` profile for simulated-data `DEL/INS/INV/TRA/DUP` detection. The default `release` profile and the original real-data pipeline remain unchanged.
+
 <p align="center">
   <img src="docs/assets/fig1-workflow.svg" alt="SharpSV workflow overview" width="1120">
 </p>
@@ -84,6 +86,28 @@ python SharpSV.py ... \
   --stage2-model /path/to/custom_stage2.ckpt
 ```
 
+For the simulated-data five-class workflow added on this branch, switch to the custom profile:
+
+```bash
+python SharpSV.py \
+  -bamfilepath /path/to/sample.sorted.bam \
+  -fastapath /path/to/reference.fa \
+  -workdir ./workdir \
+  -processes 32 \
+  -output ./SharpSV.sim5.vcf \
+  --pipeline-profile simulated-5class
+```
+
+This profile keeps the original `release` profile untouched and instead runs:
+
+- stage-1 binary anomaly scoring over all 1 kb windows
+- custom five-class stage-2 window classification for `DEL/INS/INV/TRA/DUP`
+- direct breakpoint refinement from BAM evidence (`split-read`, `soft-clip`, `SA`, discordant pairs)
+
+The simulated five-class branch ships compact inference checkpoints under `simulated_models/` so the branch stays GitHub-friendly while preserving the trained simulated-data models for end-to-end use. The final `-output` VCF is the refined `PASS` callset. The full unfiltered refined VCF remains in the workdir.
+
+At the moment, the `simulated-5class` profile expects a source checkout because it invokes helper scripts from the repository `scripts/` directory.
+
 By default the model cache lives under `XDG_CACHE_HOME` or `/tmp/sharpsv-cache/bundled-models`. Maintainers can override the release download root with `SHARPSV_BUNDLE_BASE_URL`.
 
 ## Manuscript To Runtime Mapping
@@ -103,6 +127,16 @@ By default the model cache lives under `XDG_CACHE_HOME` or `/tmp/sharpsv-cache/b
 - `stage-3`: adaptive validation -> `final_adaptive_validated.csv`
 - `stage-4`: CSV to VCF export -> `workdir/stage4_final_adaptive_validated.vcf`
 - `stage-4`: DEL realignment while preserving all variant types -> final `-output`
+
+For `--pipeline-profile simulated-5class`, the outputs are branch-specific:
+
+- `stage-1`: BAM -> NPZ feature corpus reused from `-workdir`
+- custom `stage-1` scoring -> `workdir/sim5_stage2_export/stage1_abnormal_windows.csv`
+- custom five-class `stage-2` -> `workdir/sim5_stage2_export/stage2_window_predictions.csv`
+- direct breakpoint refinement -> `workdir/sim5_breakpoint_refined/refined_events.csv`
+- direct breakpoint refinement, all calls -> `workdir/sim5_breakpoint_refined/refined_events_all.vcf`
+- direct breakpoint refinement, `PASS` calls -> `workdir/sim5_breakpoint_refined/refined_events_pass.vcf`
+- final delivered VCF -> requested `-output` path, copied from the `PASS` VCF above
 
 ## Resume Logic
 

@@ -189,3 +189,56 @@ class SharpSVRefineSequenceModel(pl.LightningModule):
 
 
 SVSequenceModel = SharpSVRefineSequenceModel
+
+
+class SharpSVStage2WindowClassifier(nn.Module):
+    def __init__(
+        self,
+        input_channels=3,
+        num_classes=5,
+        d_model=512,
+        nhead=8,
+        num_layers=4,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self.cnn = CNNEncoder(input_channels=input_channels, embed_dim=d_model)
+        self.pos_encoder = PositionalEncoding(d_model=d_model)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=num_layers,
+            enable_nested_tensor=False,
+        )
+        self.norm = nn.LayerNorm(d_model)
+        self.classifier = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 2, num_classes),
+        )
+
+    def forward(self, images, padding_mask=None):
+        b, s, c, h, w = images.size()
+        images_flat = images.view(b * s, c, h, w).contiguous()
+        cnn_feats = self.cnn(images_flat)
+        seq_feats = cnn_feats.view(b, s, -1).contiguous()
+        seq_feats = self.pos_encoder(seq_feats)
+        out = self.transformer(seq_feats, src_key_padding_mask=padding_mask)
+
+        if padding_mask is not None:
+            valid_mask = (~padding_mask).unsqueeze(-1).float()
+            pooled = (out * valid_mask).sum(dim=1) / valid_mask.sum(dim=1).clamp_min(1.0)
+        else:
+            pooled = out.mean(dim=1)
+
+        pooled = self.norm(pooled)
+        return self.classifier(pooled)
+
+
+SVWindowClassifier = SharpSVStage2WindowClassifier

@@ -1,4 +1,8 @@
 import argparse
+import json
+import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -45,6 +49,16 @@ def build_parser():
         dest="stage2_model_path",
         default=None,
         help="Optional override for the bundled stage-2 checkpoint.",
+    )
+    parser.add_argument(
+        "--pipeline-profile",
+        "--profile",
+        choices=["release", "simulated-5class"],
+        default="release",
+        help=(
+            "Pipeline profile to run. 'release' keeps the original real-data SharpSV flow. "
+            "'simulated-5class' adds the simulated-data five-class flow with direct breakpoint refinement."
+        ),
     )
     parser.add_argument(
         "-checkpointpath1",
@@ -135,11 +149,216 @@ def resolve_bundled_checkpoint(explicit_path, stage_label):
     return resolve_bundled_model_ref(stage_label), "bundled"
 
 
+def resolve_local_checkpoint(explicit_path, default_path, stage_label):
+    if explicit_path:
+        checkpoint_path = Path(explicit_path).expanduser().resolve()
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"{stage_label} checkpoint override not found: {checkpoint_path}")
+        return str(checkpoint_path), "override"
+
+    default_path = Path(default_path).expanduser().resolve()
+    if not default_path.exists():
+        raise FileNotFoundError(
+            f"Default {stage_label} checkpoint not found: {default_path}. "
+            "Pass an explicit override with --stage1-model or --stage2-model."
+        )
+    return str(default_path), "local-default"
+
+
+def _repo_root():
+    return Path(__file__).resolve().parents[2]
+
+
+def _repo_script_path(script_name):
+    script_path = _repo_root() / "scripts" / script_name
+    if not script_path.exists():
+        raise FileNotFoundError(
+            f"Required helper script not found: {script_path}. "
+            "The simulated-5class profile currently requires a full source checkout."
+        )
+    return script_path
+
+
+def run_repo_script(script_name, script_args, stage_label):
+    script_path = _repo_script_path(script_name)
+    command = [sys.executable, str(script_path), *[str(arg) for arg in script_args]]
+    emit(stage_label, f"launching helper: {' '.join(command)}")
+    subprocess.run(command, check=True)
+
+
+def run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, started_at):
+    repo_root = _repo_root()
+    stage1_checkpoint, stage1_checkpoint_source = resolve_local_checkpoint(
+        args.stage1_model_path,
+        repo_root / "simulated_models" / "stage1_simulated_5class_compact.pt",
+        "simulated stage-1",
+    )
+    stage2_checkpoint, stage2_checkpoint_source = resolve_local_checkpoint(
+        args.stage2_model_path,
+        repo_root / "simulated_models" / "stage2_simulated_5class_compact_fp16.pt",
+        "simulated stage-2",
+    )
+
+    workdir_path = Path(workdir).expanduser().resolve()
+    workdir_path.mkdir(parents=True, exist_ok=True)
+    output_path = str(Path(output_path).expanduser().resolve())
+    stage2_export_dir = workdir_path / "sim5_stage2_export"
+    refine_dir = workdir_path / "sim5_breakpoint_refined"
+    stage1_output = stage2_export_dir / "stage1_abnormal_windows.csv"
+    stage2_output = stage2_export_dir / "stage2_window_predictions.csv"
+    refined_all_vcf = refine_dir / "refined_events_all.vcf"
+    refined_pass_vcf = refine_dir / "refined_events_pass.vcf"
+    refined_csv = refine_dir / "refined_events.csv"
+    summary_path = workdir_path / "sim5_pipeline_summary.json"
+
+    emit_banner(
+        "Structural Variant Discovery Pipeline",
+        details=[
+            ("started", time.strftime("%Y-%m-%d %H:%M:%S")),
+            ("profile", "simulated-5class"),
+            ("workdir", str(workdir_path)),
+            ("stage-1 windows", str(stage1_output)),
+            ("stage-2 output", str(stage2_output)),
+            ("refined csv", str(refined_csv)),
+            ("refined all vcf", str(refined_all_vcf)),
+            ("final output", output_path),
+            (
+                "stage-1 model",
+                stage1_checkpoint if stage1_checkpoint_source == "override" else "local://simulated_models/stage1_simulated_5class_compact.pt",
+            ),
+            (
+                "stage-2 model",
+                stage2_checkpoint if stage2_checkpoint_source == "override" else "local://simulated_models/stage2_simulated_5class_compact_fp16.pt",
+            ),
+            ("cpu workers", process_count),
+        ],
+    )
+    emit("pipeline", "simulated-5class profile selected; the original release profile and real-data three-class workflow remain unchanged")
+    emit("pipeline", "the simulated profile skips the original stage-3 local assembly and stage-4 DEL realignment")
+    emit("pipeline", f"custom stage-1 candidate CSV will be written to {stage1_output}")
+    emit("pipeline", f"custom stage-2 five-class CSV will be written to {stage2_output}")
+    emit("pipeline", f"direct breakpoint refinement CSV will be written to {refined_csv}")
+
+    stage1_status = inspect_stage1_workdir(workdir)
+    if args.force_regenerate_npz:
+        emit("stage-1/features", "forced regeneration enabled; existing NPZ outputs will be replaced")
+        reuse_stage1_npz = False
+    else:
+        reuse_stage1_npz = stage1_status["reusable"]
+
+    if reuse_stage1_npz:
+        emit(
+            "stage-1/features",
+            "reusing existing NPZ feature corpus: "
+            f"{stage1_status['root_npz_count']} files ({stage1_status['reason']})",
+        )
+        if not stage1_status["marker_exists"]:
+            marker_path = write_stage1_completion_marker(workdir)
+            emit("stage-1/features", f"wrote missing completion marker: {marker_path}")
+    else:
+        if stage1_status["root_npz_count"] > 0:
+            emit(
+                "stage-1/features",
+                "existing NPZ outputs will be regenerated because "
+                f"{stage1_status['reason']}",
+            )
+        else:
+            emit("stage-1/features", "no reusable NPZ outputs found; generating feature corpus from BAM")
+        baseinfo_main(
+            bamfilepath=args.bamfilepath,
+            workdir=workdir,
+            max_worker=process_count,
+        )
+
+    emit("pipeline", "custom stage-1 + five-class stage-2 full-window inference begins")
+    run_repo_script(
+        "export_stage2_genomewide_vcf.py",
+        [
+            "--stage1-workdirs",
+            str(workdir_path),
+            "--stage1-checkpoint",
+            stage1_checkpoint,
+            "--stage2-checkpoint",
+            stage2_checkpoint,
+            "--bam",
+            args.bamfilepath,
+            "--fasta",
+            args.fasta_path,
+            "--outdir",
+            str(stage2_export_dir),
+            "--stage1-batch-size",
+            str(args.stage1_batchsize),
+            "--cpu-workers",
+            str(process_count),
+        ],
+        stage_label="stage-2",
+    )
+
+    emit("pipeline", "direct breakpoint refinement begins")
+    run_repo_script(
+        "refine_stage2_window_predictions_to_precise_vcf.py",
+        [
+            "--predictions",
+            str(stage2_output),
+            "--bam",
+            args.bamfilepath,
+            "--fasta",
+            args.fasta_path,
+            "--outdir",
+            str(refine_dir),
+            "--workers",
+            str(process_count),
+            "--sample-name",
+            "SharpSV",
+        ],
+        stage_label="stage-4",
+    )
+
+    if not refined_pass_vcf.exists():
+        raise FileNotFoundError(f"Expected refined PASS VCF was not produced: {refined_pass_vcf}")
+
+    final_output_path = Path(output_path).expanduser().resolve()
+    final_output_path.parent.mkdir(parents=True, exist_ok=True)
+    if refined_pass_vcf.resolve() != final_output_path:
+        shutil.copy2(refined_pass_vcf, final_output_path)
+        emit("pipeline", f"copied final PASS VCF to {final_output_path}")
+    else:
+        emit("pipeline", f"final PASS VCF already at requested output path: {final_output_path}")
+
+    summary_payload = {
+        "profile": "simulated-5class",
+        "bam": str(Path(args.bamfilepath).expanduser().resolve()),
+        "fasta": str(Path(args.fasta_path).expanduser().resolve()),
+        "workdir": str(workdir_path),
+        "stage1_checkpoint": stage1_checkpoint,
+        "stage2_checkpoint": stage2_checkpoint,
+        "stage2_export_dir": str(stage2_export_dir),
+        "refine_dir": str(refine_dir),
+        "stage1_candidates_csv": str(stage1_output),
+        "stage2_predictions_csv": str(stage2_output),
+        "refined_csv": str(refined_csv),
+        "refined_all_vcf": str(refined_all_vcf),
+        "refined_pass_vcf": str(refined_pass_vcf),
+        "final_output": str(final_output_path),
+        "elapsed_seconds": round(time.time() - started_at, 2),
+    }
+    summary_path.write_text(json.dumps(summary_payload, indent=2, sort_keys=True), encoding="utf-8")
+    emit("pipeline", f"wrote simulated-5class pipeline summary to {summary_path}")
+    emit("pipeline", f"pipeline completed in {format_duration(time.time() - started_at)}")
+    return 0
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
 
     started_at = time.time()
     process_count = args.processes or available_worker_count()
+    workdir = resolve_workdir(args.output, args.workdir)
+    output_path = str(Path(args.output).expanduser().resolve())
+
+    if args.pipeline_profile == "simulated-5class":
+        return run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, started_at)
+
     stage1_checkpoint, stage1_checkpoint_source = resolve_bundled_checkpoint(
         args.stage1_model_path,
         "stage-1",
@@ -148,8 +367,6 @@ def main(argv=None):
         args.stage2_model_path,
         "stage-2",
     )
-    workdir = resolve_workdir(args.output, args.workdir)
-    output_path = str(Path(args.output).expanduser().resolve())
     stage3_final_csv = str(Path.cwd() / "final_adaptive_validated.csv")
     stage1_output = str(Path(workdir) / "stage1_candidates.csv")
     stage2_output = str(Path(workdir) / "stage2_predictions.csv")

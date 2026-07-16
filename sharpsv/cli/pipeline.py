@@ -53,11 +53,11 @@ def build_parser():
     parser.add_argument(
         "--pipeline-profile",
         "--profile",
-        choices=["release", "simulated-5class"],
+        choices=["release", "sv5-direct"],
         default="release",
         help=(
             "Pipeline profile to run. 'release' keeps the original real-data SharpSV flow. "
-            "'simulated-5class' adds the simulated-data five-class flow with direct breakpoint refinement."
+            "'sv5-direct' adds a five-class SV flow with direct breakpoint refinement."
         ),
     )
     parser.add_argument(
@@ -174,7 +174,7 @@ def _repo_script_path(script_name):
     if not script_path.exists():
         raise FileNotFoundError(
             f"Required helper script not found: {script_path}. "
-            "The simulated-5class profile currently requires a full source checkout."
+            "The sv5-direct profile currently requires a full source checkout."
         )
     return script_path
 
@@ -186,36 +186,36 @@ def run_repo_script(script_name, script_args, stage_label):
     subprocess.run(command, check=True)
 
 
-def run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, started_at):
+def run_sv5_direct_pipeline(args, process_count, workdir, output_path, started_at):
     repo_root = _repo_root()
     stage1_checkpoint, stage1_checkpoint_source = resolve_local_checkpoint(
         args.stage1_model_path,
-        repo_root / "simulated_models" / "stage1_simulated_5class_compact.pt",
-        "simulated stage-1",
+        repo_root / "sv5_models" / "stage1_sv5_direct_compact.pt",
+        "sv5-direct stage-1",
     )
     stage2_checkpoint, stage2_checkpoint_source = resolve_local_checkpoint(
         args.stage2_model_path,
-        repo_root / "simulated_models" / "stage2_simulated_5class_compact_fp16.pt",
-        "simulated stage-2",
+        repo_root / "sv5_models" / "stage2_sv5_direct_compact_fp16.pt",
+        "sv5-direct stage-2",
     )
 
     workdir_path = Path(workdir).expanduser().resolve()
     workdir_path.mkdir(parents=True, exist_ok=True)
     output_path = str(Path(output_path).expanduser().resolve())
-    stage2_export_dir = workdir_path / "sim5_stage2_export"
-    refine_dir = workdir_path / "sim5_breakpoint_refined"
+    stage2_export_dir = workdir_path / "sv5_stage2_export"
+    refine_dir = workdir_path / "sv5_breakpoint_refined"
     stage1_output = stage2_export_dir / "stage1_abnormal_windows.csv"
     stage2_output = stage2_export_dir / "stage2_window_predictions.csv"
     refined_all_vcf = refine_dir / "refined_events_all.vcf"
     refined_pass_vcf = refine_dir / "refined_events_pass.vcf"
     refined_csv = refine_dir / "refined_events.csv"
-    summary_path = workdir_path / "sim5_pipeline_summary.json"
+    summary_path = workdir_path / "sv5_pipeline_summary.json"
 
     emit_banner(
         "Structural Variant Discovery Pipeline",
         details=[
             ("started", time.strftime("%Y-%m-%d %H:%M:%S")),
-            ("profile", "simulated-5class"),
+            ("profile", "sv5-direct"),
             ("workdir", str(workdir_path)),
             ("stage-1 windows", str(stage1_output)),
             ("stage-2 output", str(stage2_output)),
@@ -224,17 +224,17 @@ def run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, 
             ("final output", output_path),
             (
                 "stage-1 model",
-                stage1_checkpoint if stage1_checkpoint_source == "override" else "local://simulated_models/stage1_simulated_5class_compact.pt",
+                stage1_checkpoint if stage1_checkpoint_source == "override" else "local://sv5_models/stage1_sv5_direct_compact.pt",
             ),
             (
                 "stage-2 model",
-                stage2_checkpoint if stage2_checkpoint_source == "override" else "local://simulated_models/stage2_simulated_5class_compact_fp16.pt",
+                stage2_checkpoint if stage2_checkpoint_source == "override" else "local://sv5_models/stage2_sv5_direct_compact_fp16.pt",
             ),
             ("cpu workers", process_count),
         ],
     )
-    emit("pipeline", "simulated-5class profile selected; the original release profile and real-data three-class workflow remain unchanged")
-    emit("pipeline", "the simulated profile skips the original stage-3 local assembly and stage-4 DEL realignment")
+    emit("pipeline", "sv5-direct profile selected; the original release profile and real-data three-class workflow remain unchanged")
+    emit("pipeline", "the sv5-direct profile skips the original stage-3 local assembly and stage-4 DEL realignment")
     emit("pipeline", f"custom stage-1 candidate CSV will be written to {stage1_output}")
     emit("pipeline", f"custom stage-2 five-class CSV will be written to {stage2_output}")
     emit("pipeline", f"direct breakpoint refinement CSV will be written to {refined_csv}")
@@ -326,7 +326,7 @@ def run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, 
         emit("pipeline", f"final PASS VCF already at requested output path: {final_output_path}")
 
     summary_payload = {
-        "profile": "simulated-5class",
+        "profile": "sv5-direct",
         "bam": str(Path(args.bamfilepath).expanduser().resolve()),
         "fasta": str(Path(args.fasta_path).expanduser().resolve()),
         "workdir": str(workdir_path),
@@ -343,7 +343,7 @@ def run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, 
         "elapsed_seconds": round(time.time() - started_at, 2),
     }
     summary_path.write_text(json.dumps(summary_payload, indent=2, sort_keys=True), encoding="utf-8")
-    emit("pipeline", f"wrote simulated-5class pipeline summary to {summary_path}")
+    emit("pipeline", f"wrote sv5-direct pipeline summary to {summary_path}")
     emit("pipeline", f"pipeline completed in {format_duration(time.time() - started_at)}")
     return 0
 
@@ -356,8 +356,8 @@ def main(argv=None):
     workdir = resolve_workdir(args.output, args.workdir)
     output_path = str(Path(args.output).expanduser().resolve())
 
-    if args.pipeline_profile == "simulated-5class":
-        return run_simulated_fiveclass_pipeline(args, process_count, workdir, output_path, started_at)
+    if args.pipeline_profile == "sv5-direct":
+        return run_sv5_direct_pipeline(args, process_count, workdir, output_path, started_at)
 
     stage1_checkpoint, stage1_checkpoint_source = resolve_bundled_checkpoint(
         args.stage1_model_path,

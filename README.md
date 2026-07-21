@@ -7,18 +7,18 @@ SharpSV is a short-read SV detection tool based on site-centered hierarchical re
 </p>
 
 <p align="center">
-  <em>Fig. 1. SharpSV workflow overview. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
+  <em>Fig. 1. SharpSV workflow. A stage-by-stage walkthrough is available in <a href="docs/PIPELINE_OVERVIEW.md">docs/PIPELINE_OVERVIEW.md</a>.</em>
 </p>
 
 
 ## Concept
 
-SharpSV follows the same four-stage logic described in the manuscript:
+SharpSV follows a four-stage logic:
 
-- coarse screening: 1,000-bp windows, nine site-wise features, and attentive MIL pruning of normal genomic background
-- sequence-to-image encoding: twenty consecutive 50-bp subregions converted into VSP image tensors
-- spatial-sequential recognition: CNN and transformer modeling across ordered VSP segments
-- breakpoint refinement: local assembly, contig realignment, and adaptive validation to base-pair resolution
+- Coarse screening: 1,000-bp windows, nine site-wise features, and attentive MIL pruning of normal genomic background
+- Sequence-to-image encoding: twenty consecutive 50-bp subregions converted into VSP image tensors
+- Spatial-sequential recognition: CNN and transformer modeling across ordered VSP segments
+- Breakpoint refinement: local assembly, contig realignment, and adaptive validation to base-pair resolution
 
 The production codebase then appends a practical finalization stage that exports validated calls to VCF and performs DEL-focused realignment refinement for the final deliverable file.
 

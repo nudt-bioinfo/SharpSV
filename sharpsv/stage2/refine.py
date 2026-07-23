@@ -45,19 +45,19 @@ def _safe_stage2_artifact_stem(chrom, start, end):
     return f"{chrom}_{int(start)}_{int(end)}"
 
 
-def _build_stage2_contact_sheet(seq_array, thumb_size=128, columns=5):
-    frames = np.asarray(seq_array, dtype=np.uint8).transpose(0, 2, 3, 1)
-    rows = (len(frames) + columns - 1) // columns
-    sheet = np.zeros((rows * thumb_size, columns * thumb_size, 3), dtype=np.uint8)
-    step = max(frames.shape[1] // thumb_size, 1)
+def _build_stage2_channel_contact_sheet(channel_frames, thumb_size=128, columns=5):
+    channel_frames = np.asarray(channel_frames, dtype=np.uint8)
+    rows = (len(channel_frames) + columns - 1) // columns
+    sheet = np.zeros((rows * thumb_size, columns * thumb_size), dtype=np.uint8)
+    step = max(channel_frames.shape[1] // thumb_size, 1)
 
-    for idx, frame in enumerate(frames):
+    for idx, frame in enumerate(channel_frames):
         row = idx // columns
         col = idx % columns
-        thumb = frame[::step, ::step, :][:thumb_size, :thumb_size, :]
+        thumb = frame[::step, ::step][:thumb_size, :thumb_size]
         y0 = row * thumb_size
         x0 = col * thumb_size
-        sheet[y0 : y0 + thumb.shape[0], x0 : x0 + thumb.shape[1], :] = thumb
+        sheet[y0 : y0 + thumb.shape[0], x0 : x0 + thumb.shape[1]] = thumb
 
     return sheet
 
@@ -68,16 +68,20 @@ def _save_stage2_contact_sheet(seq_tensor, chrom, start, end, image_output_dir):
 
     image_output_dir = Path(image_output_dir).expanduser().resolve()
     image_output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = image_output_dir / f"{_safe_stage2_artifact_stem(chrom, start, end)}.png"
-    sheet = _build_stage2_contact_sheet(seq_tensor.numpy())
+    stem = _safe_stage2_artifact_stem(chrom, start, end)
+    seq_array = seq_tensor.numpy()
 
-    if Image is not None:
-        Image.fromarray(sheet, mode="RGB").save(output_path)
-        return
+    for channel_idx in range(seq_array.shape[1]):
+        output_path = image_output_dir / f"{stem}.ch{channel_idx + 1}.png"
+        sheet = _build_stage2_channel_contact_sheet(seq_array[:, channel_idx, :, :])
 
-    from matplotlib import image as mpl_image
+        if Image is not None:
+            Image.fromarray(sheet, mode="L").save(output_path)
+            continue
 
-    mpl_image.imsave(output_path, sheet)
+        from matplotlib import image as mpl_image
+
+        mpl_image.imsave(output_path, sheet, cmap="gray", vmin=0, vmax=255)
 
 
 def available_process_count():

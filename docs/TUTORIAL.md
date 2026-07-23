@@ -45,7 +45,7 @@ The demo bundle contains a small HG002-derived BAM/FASTA pair plus the required 
 
 - `workdir/stage1_candidates.csv`
 - `workdir/stage2_predictions.csv`
-- `workdir/stage2_images/`
+- `workdir/stage2_images/` (three grayscale PNGs per candidate window, one per channel)
 - `workdir/stage3_refined_sv_results.csv`
 - `workdir/stage3_assembled_regions/`
 - `workdir/final_adaptive_validated.csv`

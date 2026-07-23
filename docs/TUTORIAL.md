@@ -64,16 +64,7 @@ SharpSV \
   -output ./SharpSV.vcf
 ```
 
-If you are running directly from a source checkout, the equivalent command is:
-
-```bash
-python SharpSV.py \
-  -bamfilepath /path/to/sample.sorted.bam \
-  -fastapath /path/to/reference.fa \
-  -workdir ./workdir \
-  -processes 32 \
-  -output ./SharpSV.vcf
-```
+If you are running directly from a source checkout, replace `SharpSV` with `python SharpSV.py`.
 
 On the first run, SharpSV downloads the bundled stage checkpoints from the GitHub Release assets, stores them in the local cache, and verifies them with SHA256 before inference.
 

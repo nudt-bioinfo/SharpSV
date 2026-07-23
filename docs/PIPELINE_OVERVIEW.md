@@ -1,6 +1,6 @@
 # SharpSV Pipeline Overview
 
-SharpSV is designed as a site-centered hierarchical analysis and refinement pipeline for structural variant discovery from short-read sequencing data. The repository implementation follows the same core logic described in the manuscript: coarse screening, sequence-to-image encoding, spatial-sequential recognition, and breakpoint refinement, with an additional production-facing VCF finalization step for end-user output.
+SharpSV is an end-to-end short-read structural variant discovery pipeline. The implementation is organized around four core stages: coarse screening, sequence-to-image encoding, spatial-sequential recognition, and breakpoint refinement, with an additional production-facing VCF finalization step for end-user output.
 
 <p align="center">
   <img src="assets/fig1-workflow.svg" alt="SharpSV workflow overview" width="1120">
@@ -10,7 +10,7 @@ SharpSV is designed as a site-centered hierarchical analysis and refinement pipe
   <em>Fig. 1. Overview of SharpSV for structural variant discovery from short-read sequencing data.</em>
 </p>
 
-## Manuscript-Aligned Stages
+## Pipeline Stages
 
 ### 1. Coarse screening
 
@@ -30,7 +30,7 @@ High-confidence candidate regions are assembled locally, and assembled contigs a
 
 ## Mapping To The Codebase
 
-- manuscript coarse screening: `sharpsv/stage1/`
-- manuscript sequence-to-image plus spatial-sequential recognition: `sharpsv/stage2/`
-- manuscript local assembly and breakpoint refinement: `sharpsv/stage3/`
+- coarse screening: `sharpsv/stage1/`
+- sequence-to-image plus spatial-sequential recognition: `sharpsv/stage2/`
+- local assembly and breakpoint refinement: `sharpsv/stage3/`
 - production VCF export and DEL realignment extension: `sharpsv/stage4/`

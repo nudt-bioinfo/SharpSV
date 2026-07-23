@@ -6,7 +6,7 @@
 - `sharpsv/`: organized implementation package.
 - `fermikit/`: local-assembly toolchain plus Python wrappers used in stage-3.
 - `legacy/`: archived compatibility modules and older utilities.
-- `docs/`: installation notes, codebase layout, release notes, manuscript-aligned overview, and figure assets for the GitHub presentation layer.
+- `docs/`: installation notes, usage tutorial, pipeline overview, codebase layout, release notes, and figure assets for the GitHub presentation layer.
 - `workdir/`: intermediate runtime artifacts such as NPZ blocks, stage-1 candidates, stage-2 `stage2_predictions.csv`, and stage-3 products such as `stage3_refined_sv_results.csv`, `stage3_assembled_regions/`, `stage3_merge_temp/`, and `stage3_assembled_regions.sorted.bam`.
 
 ## `sharpsv/`
@@ -61,15 +61,18 @@
 - `local_assemble.py`: builds `workdir/stage3_assembled_regions/` from `stage3_refined_sv_results.csv` and writes `stage3_assembly_results.json`, `stage3_assembled_regions_manifest.tsv`, and `stage3_assembled_regions_archive.tar.gz`.
 - `merge_bams.py`: merges per-region assembly BAMs into `workdir/stage3_assembled_regions.sorted.bam` using `workdir/stage3_merge_temp/`.
 
-## Stage Commands
+## Entry Points
 
-Stage-specific commands are exposed through installed console entry points or direct module execution:
+Most users should start with the full pipeline entrypoint:
 
-- `sharpsv-stage1-extract-features` or `python -m sharpsv.stage1.features`
-- `sharpsv-stage1-score-candidates` or `python -m sharpsv.stage1.predict`
-- `sharpsv-stage1-train` or `python -m sharpsv.stage1.train`
-- `sharpsv-stage2-refine-predictions` or `python -m sharpsv.stage2.refine`
-- `sharpsv-stage3-sort-predictions` or `python -m sharpsv.stage3.sort_predictions`
-- `sharpsv-stage3-validate-assembly` or `python -m sharpsv.stage3.assembly_validator`
-- `sharpsv-stage4-export-vcf` or `python -m sharpsv.stage4.export_vcf_cli`
-- `sharpsv-stage4-realign-vcf` or `python -m sharpsv.stage4.realign_vcf`
+- `SharpSV`
+- `python SharpSV.py`
+
+Developer-oriented stage entrypoints are also available and follow the repository stage boundaries:
+
+- stage-1: feature extraction, candidate scoring, and training
+- stage-2: refinement inference
+- stage-3: prediction sorting and assembly validation
+- stage-4: VCF export and DEL realignment
+
+Direct module execution remains available under `python -m sharpsv.<stage>...` when working from a source checkout.

@@ -1,4 +1,4 @@
-# SharpSV Installation And Usage
+# SharpSV Installation Guide
 
 ## Overview
 
@@ -52,20 +52,15 @@ This installs:
 - bundled `fermikit` runtime
 - command-line entry points such as `SharpSV`
 
-## Quick Start
+## Verify The Install
 
-Run the full pipeline:
+After installation, confirm that the main CLI is available:
 
 ```bash
-SharpSV \
-  -bamfilepath /path/to/sample.sorted.bam \
-  -fastapath /path/to/reference.fa \
-  -workdir ./workdir \
-  -processes 32 \
-  -output ./SharpSV.vcf
+SharpSV --help
 ```
 
-The default bundled models are used automatically.
+The default bundled models are used automatically at runtime.
 If the local cache is empty, SharpSV downloads:
 
 - `stage1.model.bin`
@@ -82,42 +77,11 @@ Optional maintainer override:
 
 - set `SHARPSV_BUNDLE_BASE_URL` to point SharpSV at another release or mirror root
 
-You can also use the installed console entrypoint:
+## Next Step
 
-```bash
-SharpSV \
-  -bamfilepath /path/to/sample.sorted.bam \
-  -fastapath /path/to/reference.fa \
-  -workdir ./workdir \
-  -processes 32 \
-  -output ./SharpSV.vcf
-```
+After installation, continue with the full usage guide:
 
-## Optional Model Override
-
-Advanced users can override the bundled models with their own checkpoints:
-
-```bash
-SharpSV \
-  -bamfilepath /path/to/sample.sorted.bam \
-  -fastapath /path/to/reference.fa \
-  --stage1-model /path/to/custom_stage1.ckpt \
-  --stage2-model /path/to/custom_stage2.ckpt \
-  -output ./SharpSV.vcf
-```
-
-## Intermediate Outputs
-
-During execution SharpSV produces staged artifacts:
-
-- `workdir/stage1_candidates.csv`
-- `workdir/stage2_predictions.csv`
-- `workdir/stage3_refined_sv_results.csv`
-- `workdir/stage3_assembled_regions/`
-- `workdir/stage4_final_adaptive_validated.vcf`
-- final `SharpSV.vcf`
-
-Resume logic is built into the pipeline, so rerunning the same command reuses completed stages when possible.
+- [TUTORIAL.md](TUTORIAL.md): end-to-end run command, outputs, resume behavior, and model overrides
 
 ## GitHub Distribution Notes
 

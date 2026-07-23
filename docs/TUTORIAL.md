@@ -67,6 +67,7 @@ SharpSV \
 If you are running directly from a source checkout, replace `SharpSV` with `python SharpSV.py`.
 
 On the first run, SharpSV downloads the bundled stage checkpoints from the GitHub Release assets, stores them in the local cache, and verifies them with SHA256 before inference.
+If the network is flaky, SharpSV keeps a partial `.part` file and resumes it automatically on the next run. You can increase retry patience with `SHARPSV_BUNDLE_DOWNLOAD_RETRIES` and `SHARPSV_BUNDLE_DOWNLOAD_RETRY_DELAY_SEC`.
 
 ## Common Arguments
 

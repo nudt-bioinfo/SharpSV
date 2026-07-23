@@ -81,7 +81,7 @@ SharpSV \
 
 If you are working from a source checkout, replace `SharpSV` with `python SharpSV.py`.
 
-On the first run, SharpSV downloads the bundled stage checkpoints from the GitHub Release assets into the local cache and verifies them with SHA256 before inference starts. Rerunning the same command reuses completed stages when possible. For output files, resume behavior, and advanced usage, see [docs/TUTORIAL.md](docs/TUTORIAL.md).
+On the first run, SharpSV downloads the bundled stage checkpoints from the GitHub Release assets into the local cache and verifies them with SHA256 before inference starts. The model downloader now resumes partial downloads automatically, so rerunning the same command continues from the cached `.part` file instead of starting over. For output files, resume behavior, and advanced usage, see [docs/TUTORIAL.md](docs/TUTORIAL.md).
 
 ## Documentation
 

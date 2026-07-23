@@ -65,7 +65,8 @@ include = ["sharpsv*", "fermikit*"]
 [tool.setuptools.package-data]
 sharpsv = [
     "_bundle/models/*.json",
-    "_bundle/native/*.so"
+    "_bundle/native/*.so",
+    "_bundle/demo/*"
 ]
 fermikit = [
     "fermi.kit/*"

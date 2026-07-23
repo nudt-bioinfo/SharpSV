@@ -8,6 +8,7 @@ The GitHub repository includes:
 
 - the full `SharpSV.py` end-to-end pipeline
 - release-backed metadata for the default stage-1 and stage-2 model assets
+- a packaged `--demo` BAM/FASTA bundle with the required BAM/FASTA indexes for a zero-setup smoke test
 - the packaged native backend used by feature extraction
 - the packaged `fermikit` runtime required by stage-3 local assembly
 - `environment.yml`, `requirements.txt`, and Python packaging metadata for reproducible installation
@@ -88,6 +89,16 @@ python SharpSV.py \
   -output ./SharpSV.vcf
 ```
 
+Self-contained demo command:
+
+```bash
+python SharpSV.py \
+  --demo \
+  -workdir ./demo-workdir \
+  -processes 4 \
+  -output ./demo-workdir/SharpSV.demo.vcf
+```
+
 Optional advanced overrides:
 
 ```bash
@@ -101,7 +112,7 @@ python SharpSV.py ... \
 SharpSV reuses staged outputs when they already exist:
 
 - if `workdir/stage2_predictions.csv` exists, stage-1 and stage-2 are skipped
-- if `final_adaptive_validated.csv` exists, stage-1 through stage-3 are skipped
+- if `workdir/final_adaptive_validated.csv` exists, stage-1 through stage-3 are skipped
 - if later-stage VCF intermediates already exist, stage-4 resumes from the newest valid artifact
 
 This allows long production runs to recover from interruption without recomputing the entire pipeline.

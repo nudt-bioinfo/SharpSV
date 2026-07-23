@@ -14,6 +14,7 @@ SharpSV is an end-to-end short-read structural variant discovery tool. It scans 
 
 - full end-to-end pipeline from BAM to final VCF
 - release-backed pretrained stage-1 and stage-2 models
+- packaged `--demo` bundle with bundled BAM/FASTA inputs and stage-by-stage outputs
 - packaged native backend and packaged `fermikit` runtime
 - GPU-aware stage-1 and stage-2 inference
 - resume-aware execution for interrupted long runs
@@ -54,6 +55,18 @@ If you prefer a plain dependency list, `requirements.txt` mirrors the runtime st
 ## Quick Start
 
 SharpSV expects a sorted and indexed BAM file with `MD` tags available.
+
+Try the self-contained demo first:
+
+```bash
+python SharpSV.py \
+  --demo \
+  -workdir ./demo-workdir \
+  -processes 4 \
+  -output ./demo-workdir/SharpSV.demo.vcf
+```
+
+The bundled demo ships with a tiny HG002-derived BAM/FASTA pair, so no external input files are needed. A successful demo run keeps the final VCF plus reusable stage outputs such as `stage1_candidates.csv`, `stage2_predictions.csv`, `stage2_images/`, `stage3_assembled_regions/`, and `final_adaptive_validated.csv` under the chosen workdir.
 
 Run the complete pipeline with the installed console entrypoint:
 

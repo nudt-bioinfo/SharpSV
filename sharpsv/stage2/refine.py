@@ -19,6 +19,10 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn.functional as F
 from scipy.ndimage import gaussian_filter1d, label
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 from ..bundled_models import resolve_runtime_checkpoint_path
 from ..utils.console import emit, emit_banner, emit_progress, format_count, format_duration, render_bar
@@ -34,6 +38,46 @@ WINDOW_SIZE = SLICE_SIZE * SEQ_LEN
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_SV_LENGTH = "sv_1000"
 FINAL_CSV_COLUMNS = ["chrom", "start", "end", "pred_sequence"]
+
+
+def _safe_stage2_artifact_stem(chrom, start, end):
+    chrom = str(chrom).replace("/", "_").replace("\\", "_").replace(":", "_")
+    return f"{chrom}_{int(start)}_{int(end)}"
+
+
+def _build_stage2_contact_sheet(seq_array, thumb_size=128, columns=5):
+    frames = np.asarray(seq_array, dtype=np.uint8).transpose(0, 2, 3, 1)
+    rows = (len(frames) + columns - 1) // columns
+    sheet = np.zeros((rows * thumb_size, columns * thumb_size, 3), dtype=np.uint8)
+    step = max(frames.shape[1] // thumb_size, 1)
+
+    for idx, frame in enumerate(frames):
+        row = idx // columns
+        col = idx % columns
+        thumb = frame[::step, ::step, :][:thumb_size, :thumb_size, :]
+        y0 = row * thumb_size
+        x0 = col * thumb_size
+        sheet[y0 : y0 + thumb.shape[0], x0 : x0 + thumb.shape[1], :] = thumb
+
+    return sheet
+
+
+def _save_stage2_contact_sheet(seq_tensor, chrom, start, end, image_output_dir):
+    if not image_output_dir:
+        return
+
+    image_output_dir = Path(image_output_dir).expanduser().resolve()
+    image_output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = image_output_dir / f"{_safe_stage2_artifact_stem(chrom, start, end)}.png"
+    sheet = _build_stage2_contact_sheet(seq_tensor.numpy())
+
+    if Image is not None:
+        Image.fromarray(sheet, mode="RGB").save(output_path)
+        return
+
+    from matplotlib import image as mpl_image
+
+    mpl_image.imsave(output_path, sheet)
 
 
 def available_process_count():
@@ -316,6 +360,7 @@ def process_candidate_chunk(
     produced_counter,
     skipped_counter,
     failed_counter,
+    image_output_dir=None,
 ):
     sam_file = pysam.AlignmentFile(bam_path, "rb")
     fasta_file = pysam.FastaFile(fasta_path)
@@ -355,6 +400,7 @@ def process_candidate_chunk(
 
                 if len(seq_tensors) == SEQ_LEN:
                     seq_stack = torch.stack(seq_tensors)
+                    _save_stage2_contact_sheet(seq_stack, original_chr_id, pos, win_end, image_output_dir)
                     queue.put((seq_stack, (original_chr_id, pos, win_end)))
                     _counter_increment(produced_counter)
             except Exception as exc:
@@ -492,6 +538,7 @@ def refine_intermediate_csv(
     processes=None,
     batch_size=DEFAULT_BATCH_SIZE,
     sv_length=DEFAULT_SV_LENGTH,
+    image_output_dir=None,
 ):
     started_at = time.time()
     fasta_path = str(Path(fasta_path).expanduser().resolve())
@@ -525,6 +572,7 @@ def refine_intermediate_csv(
             ("insert mean", mean_insert_size),
             ("insert std", sd_insert_size),
             ("mapq mean", mapping_qualities_mean),
+            ("image export", image_output_dir or "disabled"),
         ],
     )
     chunk_size = max(1, len(candidates) // processes)
@@ -556,6 +604,7 @@ def refine_intermediate_csv(
                 produced_counter,
                 skipped_counter,
                 failed_counter,
+                image_output_dir,
             ),
         )
         producer.start()
@@ -649,6 +698,12 @@ def build_parser():
     )
     parser.add_argument("-output", "--output", "--output_csv", dest="output", required=True, help="Final CSV path")
     parser.add_argument(
+        "--image-output-dir",
+        dest="image_output_dir",
+        default=None,
+        help="Optional directory for per-candidate stage-2 image contact sheets.",
+    )
+    parser.add_argument(
         "-processes",
         "--processes",
         type=int,
@@ -671,6 +726,7 @@ def main(argv=None):
         processes=args.processes,
         batch_size=args.batch_size,
         sv_length=args.sv_length,
+        image_output_dir=args.image_output_dir,
     )
     emit("stage-2", f"final refinement CSV saved to {args.output}")
     return 0

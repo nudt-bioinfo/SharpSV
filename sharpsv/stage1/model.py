@@ -172,6 +172,13 @@ class FocalLoss(nn.Module):
 # ==========================================
 # 5. Dataset
 # ==========================================
+def _normalize_contig_label(contig):
+    contig = str(contig).strip()
+    if contig.startswith("chr"):
+        contig = contig[3:]
+    return contig.upper()
+
+
 class SharpSVDataset(Dataset):
     def __init__(self, data_dirs, chromosomes=None, mode="train", vcf_path=None, verbose=True):
         if isinstance(data_dirs, str):
@@ -190,6 +197,7 @@ class SharpSVDataset(Dataset):
         self.verbose = verbose
         self.loaded_file_count = 0
         self.chromosomes = chromosomes if chromosomes else self._default_chromosomes()
+        self.chromosome_aliases = {_normalize_contig_label(chrom) for chrom in self.chromosomes}
         self._load_data()
 
     def _default_chromosomes(self):
@@ -225,7 +233,7 @@ class SharpSVDataset(Dataset):
         for file in self.data_files:
             filename = os.path.basename(file)
             chrom = filename.split(':')[0]
-            if chrom not in self.chromosomes:
+            if _normalize_contig_label(chrom) not in self.chromosome_aliases:
                 continue
 
             try:

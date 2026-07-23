@@ -7,7 +7,7 @@
 - `fermikit/`: local-assembly toolchain plus Python wrappers used in stage-3.
 - `legacy/`: archived compatibility modules and older utilities.
 - `docs/`: installation notes, usage tutorial, pipeline overview, codebase layout, release notes, and figure assets for the GitHub presentation layer.
-- `workdir/`: intermediate runtime artifacts such as NPZ blocks, stage-1 candidates, stage-2 `stage2_predictions.csv`, and stage-3 products such as `stage3_refined_sv_results.csv`, `stage3_assembled_regions/`, `stage3_merge_temp/`, and `stage3_assembled_regions.sorted.bam`.
+- `workdir/`: intermediate runtime artifacts such as NPZ blocks, stage-1 candidates, optional stage-2 image contact sheets, `stage2_predictions.csv`, and stage-3 products such as `stage3_refined_sv_results.csv`, `stage3_assembled_regions/`, `stage3_merge_temp/`, `stage3_assembled_regions.sorted.bam`, and `final_adaptive_validated.csv`.
 
 ## `sharpsv/`
 
@@ -51,6 +51,10 @@
 ### `sharpsv/_bundle/models/`
 
 - `manifest.json`: release-backed model manifest with GitHub Release location, asset names, sizes, and SHA256 checksums.
+
+### `sharpsv/_bundle/demo/`
+
+- packaged demo BAM/FASTA inputs plus `.bai`, `.fai`, BWA indexes, and `demo_region.json` metadata used by `SharpSV --demo`.
 
 ### `sharpsv/_bundle/native/`
 

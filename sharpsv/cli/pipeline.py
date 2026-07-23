@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 from ..bundled_models import resolve_bundled_model_ref, validate_bundled_model
+from ..demo_bundle import resolve_bundled_demo_inputs
 from ..stage1.features import available_worker_count, baseinfo_main, inspect_stage1_workdir, write_stage1_completion_marker
 from ..stage1.predict import predict_workdir
 from ..stage2.refine import refine_intermediate_csv
@@ -14,18 +15,21 @@ from ..utils.console import emit, emit_banner, format_duration
 def build_parser():
     parser = argparse.ArgumentParser(description="Run the full SharpSV pipeline from BAM to the final SharpSV VCF")
     parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Run the packaged HG002-derived demo bundle without supplying BAM or FASTA paths.",
+    )
+    parser.add_argument(
         "-bamfilepath",
         "--bamfilepath",
         "--bam_path",
         dest="bamfilepath",
-        required=True,
         help="Input sorted and indexed BAM file",
     )
     parser.add_argument(
         "-fastapath",
         "--fastapath",
         dest="fasta_path",
-        required=True,
         help="Reference genome FASTA path",
     )
     parser.add_argument(
@@ -84,6 +88,11 @@ def build_parser():
         help="Ignore existing stage-1 NPZ outputs in workdir and regenerate them from BAM.",
     )
     parser.add_argument(
+        "--stage2-save-images",
+        action="store_true",
+        help="Save stage-2 candidate image contact sheets under <workdir>/stage2_images. Enabled automatically in --demo mode.",
+    )
+    parser.add_argument(
         "--stage3_max_fq_mb",
         type=float,
         default=256,
@@ -135,8 +144,33 @@ def resolve_bundled_checkpoint(explicit_path, stage_label):
     return resolve_bundled_model_ref(stage_label), "bundled"
 
 
+def _resolve_pipeline_inputs(parser, args):
+    if args.demo:
+        if args.bamfilepath or args.fasta_path:
+            parser.error("--demo cannot be combined with -bamfilepath or -fastapath")
+        demo_inputs = resolve_bundled_demo_inputs()
+        return {
+            "bam_path": demo_inputs["bam_path"],
+            "fasta_path": demo_inputs["fasta_path"],
+            "demo_dir": demo_inputs["demo_dir"],
+            "demo_metadata": demo_inputs["metadata"],
+        }
+
+    if not args.bamfilepath or not args.fasta_path:
+        parser.error("either pass both -bamfilepath and -fastapath, or use --demo")
+
+    return {
+        "bam_path": str(Path(args.bamfilepath).expanduser().resolve()),
+        "fasta_path": str(Path(args.fasta_path).expanduser().resolve()),
+        "demo_dir": None,
+        "demo_metadata": None,
+    }
+
+
 def main(argv=None):
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    resolved_inputs = _resolve_pipeline_inputs(parser, args)
 
     started_at = time.time()
     process_count = args.processes or available_worker_count()
@@ -150,9 +184,13 @@ def main(argv=None):
     )
     workdir = resolve_workdir(args.output, args.workdir)
     output_path = str(Path(args.output).expanduser().resolve())
-    stage3_final_csv = str(Path.cwd() / "final_adaptive_validated.csv")
+    stage3_final_csv = str(Path(workdir) / "final_adaptive_validated.csv")
     stage1_output = str(Path(workdir) / "stage1_candidates.csv")
     stage2_output = str(Path(workdir) / "stage2_predictions.csv")
+    stage2_image_dir = str(Path(workdir) / "stage2_images") if (args.stage2_save_images or args.demo) else None
+    bam_path = resolved_inputs["bam_path"]
+    fasta_path = resolved_inputs["fasta_path"]
+    demo_metadata = resolved_inputs["demo_metadata"]
 
     emit_banner(
         "Structural Variant Discovery Pipeline",
@@ -167,8 +205,18 @@ def main(argv=None):
             ("cpu workers", process_count),
         ],
     )
+    if args.demo and demo_metadata:
+        emit(
+            "pipeline",
+            "using bundled demo inputs derived from "
+            f"{demo_metadata['source_sample']} {demo_metadata['source_reference']} "
+            f"{demo_metadata['original_chrom']}:{demo_metadata['original_pos1']}-{demo_metadata['original_stop1']} "
+            f"inside the packaged {demo_metadata['demo_contig_len']:,}-bp demo reference",
+        )
     emit("pipeline", f"stage-1 candidate CSV will be written to {stage1_output}")
     emit("pipeline", f"stage-2 prediction artifact will be written to {stage2_output}")
+    if stage2_image_dir:
+        emit("pipeline", f"stage-2 image contact sheets will be written to {stage2_image_dir}")
 
     stage4_status = inspect_stage4_state(workdir, output_path)
     if stage4_status["stage5_complete"]:
@@ -221,7 +269,7 @@ def main(argv=None):
                 emit("stage-1/features", "no reusable NPZ outputs found; generating feature corpus from BAM")
 
             baseinfo_main(
-                bamfilepath=args.bamfilepath,
+                bamfilepath=bam_path,
                 workdir=workdir,
                 max_worker=process_count,
             )
@@ -235,20 +283,21 @@ def main(argv=None):
         )
         emit("pipeline", "stage-2 refinement begins")
         refine_intermediate_csv(
-            fasta_path=args.fasta_path,
-            bam_path=args.bamfilepath,
+            fasta_path=fasta_path,
+            bam_path=bam_path,
             input_csv_path=stage1_output,
             checkpoint_path=stage2_checkpoint,
             output_path=stage2_output,
             processes=process_count,
+            image_output_dir=stage2_image_dir,
         )
 
     if not stage4_status["stage3_csv_ready"]:
         emit("pipeline", "stage-3 assembly-backed validation begins")
         run_stage3(
             predictions_csv=stage3_status["predictions_source"] or stage2_output,
-            bam_path=args.bamfilepath,
-            fasta_path=args.fasta_path,
+            bam_path=bam_path,
+            fasta_path=fasta_path,
             workdir=workdir,
             output_path=stage3_final_csv,
             processes=process_count,
@@ -261,9 +310,9 @@ def main(argv=None):
     emit("pipeline", "stage-4 VCF export and DEL realignment begins")
     run_stage4(
         workdir=workdir,
-        input_csv=stage3_final_csv,
-        bam_path=args.bamfilepath,
-        fasta_path=args.fasta_path,
+        input_csv=stage4_status["stage3_csv"] or stage3_final_csv,
+        bam_path=bam_path,
+        fasta_path=fasta_path,
         output_vcf=output_path,
         processes=process_count,
     )

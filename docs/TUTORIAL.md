@@ -27,6 +27,30 @@ conda activate SharpSV
 pip install --no-deps .
 ```
 
+## Run The Bundled Demo
+
+Use the packaged demo bundle when you want a reviewer-friendly sanity check without preparing any local BAM or FASTA files:
+
+```bash
+python SharpSV.py \
+  --demo \
+  -workdir ./demo-workdir \
+  -processes 4 \
+  -output ./demo-workdir/SharpSV.demo.vcf
+```
+
+The demo bundle contains a small HG002-derived BAM/FASTA pair plus the required `.bai`, `.fai`, and BWA index files. The demo reference is synthetic and only 100 kb long, so output coordinates are relative to the packaged demo FASTA rather than full-genome GRCh37 coordinates. The source-region mapping is recorded in `sharpsv/_bundle/demo/demo_region.json`.
+
+`--demo` also enables stage-2 image export automatically, so the run keeps:
+
+- `workdir/stage1_candidates.csv`
+- `workdir/stage2_predictions.csv`
+- `workdir/stage2_images/`
+- `workdir/stage3_refined_sv_results.csv`
+- `workdir/stage3_assembled_regions/`
+- `workdir/final_adaptive_validated.csv`
+- the final VCF at `-output`
+
 ## Run The Full Pipeline
 
 Use the installed CLI:
@@ -55,6 +79,7 @@ On the first run, SharpSV downloads the bundled stage checkpoints from the GitHu
 
 ## Common Arguments
 
+- `--demo`: use the packaged demo BAM/FASTA bundle instead of external inputs
 - `-bamfilepath`: input sorted BAM file
 - `-fastapath`: reference FASTA file
 - `-output`: final VCF path
@@ -62,6 +87,7 @@ On the first run, SharpSV downloads the bundled stage checkpoints from the GitHu
 - `-processes`: worker process count for feature extraction and stage orchestration
 - `--stage1-model`: optional override for the bundled stage-1 checkpoint
 - `--stage2-model`: optional override for the bundled stage-2 checkpoint
+- `--stage2-save-images`: save one contact-sheet PNG per stage-2 candidate window under `workdir/stage2_images/`
 - `--force_regenerate_npz`: rebuild stage-1 NPZ features even if reusable outputs already exist
 
 ## What SharpSV Writes
@@ -76,13 +102,14 @@ SharpSV writes both reusable intermediates and final outputs.
 ### Stage 2
 
 - refined prediction CSV: `workdir/stage2_predictions.csv`
+- optional candidate image contact sheets: `workdir/stage2_images/`
 
 ### Stage 3
 
 - sorted candidate intervals: `workdir/stage3_refined_sv_results.csv`
 - per-region local assembly outputs: `workdir/stage3_assembled_regions/`
 - merged assembly BAM: `workdir/stage3_assembled_regions.sorted.bam`
-- adaptive validation CSV: `final_adaptive_validated.csv`
+- adaptive validation CSV: `workdir/final_adaptive_validated.csv`
 
 ### Stage 4
 
@@ -94,7 +121,7 @@ SharpSV writes both reusable intermediates and final outputs.
 SharpSV is designed to resume from completed stages.
 
 - if `workdir/stage2_predictions.csv` already exists, SharpSV skips stage-1 and stage-2
-- if `final_adaptive_validated.csv` already exists, SharpSV skips stage-1 through stage-3
+- if `workdir/final_adaptive_validated.csv` already exists, SharpSV skips stage-1 through stage-3
 - legacy `predictions.csv` and older stage-3 artifact names are still recognized for compatibility
 - if you need to rebuild the stage-1 feature corpus, add `--force_regenerate_npz`
 

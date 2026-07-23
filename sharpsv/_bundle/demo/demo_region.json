@@ -1,0 +1,19 @@
+{
+  "source_sample": "HG002",
+  "source_reference": "hs37d5",
+  "original_chrom": "1",
+  "original_pos1": 1223727,
+  "original_stop1": 1223855,
+  "svtype": "DEL",
+  "svlen": 128,
+  "source_start0": 1213726,
+  "source_end0": 1233855,
+  "source_len": 20129,
+  "demo_contig": "1",
+  "demo_contig_len": 100000,
+  "left_pad": 39935,
+  "right_pad": 39936,
+  "local_event_start_1based": 49937,
+  "local_event_end_1based": 50065,
+  "notes": "The bundled demo FASTA is synthetic and uses local coordinates on a 100 kb contig named 1."
+}

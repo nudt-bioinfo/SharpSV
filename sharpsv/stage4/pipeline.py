@@ -33,7 +33,7 @@ def build_stage4_paths(workdir, output_vcf):
     final_vcf_path = Path(output_vcf).expanduser().resolve()
     return Stage4Paths(
         workdir=workdir_path,
-        stage3_final_csv=Path.cwd() / STAGE3_FINAL_CSV_BASENAME,
+        stage3_final_csv=workdir_path / STAGE3_FINAL_CSV_BASENAME,
         stage4_vcf=workdir_path / STAGE4_VCF_BASENAME,
         final_vcf=final_vcf_path,
         stage4_marker=workdir_path / STAGE4_MARKER,
@@ -50,6 +50,25 @@ def _write_marker(marker_path, payload):
 
 def _marker_is_complete(marker_path, required_paths):
     return marker_path.exists() and all(Path(path).exists() for path in required_paths)
+
+
+def _read_marker_output_csv(marker_path):
+    marker_path = Path(marker_path)
+    if not marker_path.exists():
+        return None
+    try:
+        with open(marker_path) as handle:
+            payload = json.load(handle)
+    except Exception:
+        return None
+
+    output_csv = payload.get("output_csv")
+    if not output_csv:
+        return None
+    output_path = Path(output_csv).expanduser().resolve()
+    if output_path.exists():
+        return output_path
+    return None
 
 
 def _normalize_chrom(chrom):
@@ -235,10 +254,10 @@ def refine_vcf_preserving_all_variants(input_vcf, bam_path, ref_path, output_vcf
 
 def inspect_stage4_state(workdir, output_vcf):
     paths = build_stage4_paths(workdir, output_vcf)
-    csv_candidates = [
-        paths.stage3_final_csv,
-        paths.workdir / STAGE3_FINAL_CSV_BASENAME,
-    ]
+    csv_candidates = [paths.stage3_final_csv]
+    marker_output_csv = _read_marker_output_csv(paths.workdir / "stage3_validate.complete.json")
+    if marker_output_csv is not None and marker_output_csv not in csv_candidates:
+        csv_candidates.append(marker_output_csv)
     stage3_csv = next((path.resolve() for path in csv_candidates if path.exists()), None)
     return {
         "paths": paths,

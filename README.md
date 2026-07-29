@@ -67,7 +67,12 @@ The bundled demo ships with a tiny HG002-derived BAM/FASTA pair inside the repos
 Run the complete pipeline with the installed console entrypoint:
 
 ```bash
-SharpSV -bamfilepath /path/to/sample.sorted.bam -fastapath /path/to/reference.fa -workdir ./workdir -processes 32 -output ./SharpSV.vcf
+SharpSV \
+  -bamfilepath /path/to/sample.sorted.bam \
+  -fastapath /path/to/reference.fa \
+  -workdir ./workdir \
+  -processes 32 \
+  -output ./SharpSV.vcf
 ```
 
 If you are working from a source checkout, replace `SharpSV` with `python SharpSV.py`.

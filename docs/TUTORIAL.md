@@ -41,7 +41,12 @@ The demo bundle contains a small HG002-derived BAM/FASTA pair plus the required 
 Use the installed CLI:
 
 ```bash
-SharpSV -bamfilepath /path/to/sample.sorted.bam -fastapath /path/to/reference.fa -workdir ./workdir -processes 32 -output ./SharpSV.vcf
+SharpSV \
+  -bamfilepath /path/to/sample.sorted.bam \
+  -fastapath /path/to/reference.fa \
+  -workdir ./workdir \
+  -processes 32 \
+  -output ./SharpSV.vcf
 ```
 
 If you are running directly from a source checkout, replace `SharpSV` with `python SharpSV.py`.

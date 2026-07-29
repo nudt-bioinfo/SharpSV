@@ -14,7 +14,7 @@ SharpSV is an end-to-end short-read structural variant discovery tool. It scans 
 
 - full end-to-end pipeline from BAM to final VCF
 - release-backed pretrained stage-1 and stage-2 models
-- packaged `--demo` bundle with bundled BAM/FASTA inputs and stage-by-stage outputs
+- packaged demo BAM/FASTA bundle for a reviewer-friendly test run
 - packaged native backend and packaged `fermikit` runtime
 - GPU-aware stage-1 and stage-2 inference
 - resume-aware execution for interrupted long runs
@@ -59,27 +59,30 @@ SharpSV expects a sorted and indexed BAM file with `MD` tags available.
 Try the self-contained demo first:
 
 ```bash
-python SharpSV.py \
-  --demo \
-  -workdir ./demo-workdir \
-  -processes 4 \
-  -output ./demo-workdir/SharpSV.demo.vcf
+python SharpSV.py -bamfilepath ./sharpsv/_bundle/demo/demo.bam -fastapath ./sharpsv/_bundle/demo/demo.fa -workdir ./demo-workdir -processes 4 -output ./demo-workdir/SharpSV.demo.vcf
 ```
 
-The bundled demo ships with a tiny HG002-derived BAM/FASTA pair, so no external input files are needed. A successful demo run keeps the final VCF plus reusable stage outputs such as `stage1_candidates.csv`, `stage2_predictions.csv`, `stage2_images/`, `stage3_assembled_regions/`, and `final_adaptive_validated.csv` under the chosen workdir.
+The bundled demo ships with a tiny HG002-derived BAM/FASTA pair inside the repository, so no external input files are needed. The demo reference is synthetic and uses local coordinates recorded in `sharpsv/_bundle/demo/demo_region.json`.
 
 Run the complete pipeline with the installed console entrypoint:
 
 ```bash
-SharpSV \
-  -bamfilepath /path/to/sample.sorted.bam \
-  -fastapath /path/to/reference.fa \
-  -workdir ./workdir \
-  -processes 32 \
-  -output ./SharpSV.vcf
+SharpSV -bamfilepath /path/to/sample.sorted.bam -fastapath /path/to/reference.fa -workdir ./workdir -processes 32 -output ./SharpSV.vcf
 ```
 
 If you are working from a source checkout, replace `SharpSV` with `python SharpSV.py`.
+
+Common arguments:
+
+- `-bamfilepath`: input sorted and indexed BAM file
+- `-fastapath`: reference FASTA file
+- `-workdir`: intermediate output directory; if omitted, SharpSV uses `<output>.workdir`
+- `-processes`: worker process count for feature extraction and stage orchestration
+- `-output`: final VCF path
+- `--stage1-model`: optional override for the bundled stage-1 checkpoint
+- `--stage2-model`: optional override for the bundled stage-2 checkpoint
+- `--stage2-save-images`: save stage-2 grayscale image sheets under `workdir/stage2_images/`
+- `--force_regenerate_npz`: rebuild stage-1 NPZ features even if reusable outputs already exist
 
 On the first run, SharpSV downloads the bundled stage checkpoints from the GitHub Release assets into the local cache and verifies them with SHA256 before inference starts. The model downloader now resumes partial downloads automatically, so rerunning the same command continues from the cached `.part` file instead of starting over. For output files, resume behavior, and advanced usage, see [docs/TUTORIAL.md](docs/TUTORIAL.md).
 
